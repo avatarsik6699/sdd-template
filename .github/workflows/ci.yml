@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Lint ─────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install backend deps
+        run: uv sync --dev
+
+      - name: Ruff lint
+        run: uv run ruff check app/ tests/
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Nuxt prepare (generate types)
+        working-directory: frontend
+        run: pnpm nuxt prepare
+
+      - name: TypeScript check
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
+
+  # ── Backend Tests ─────────────────────────────────────────────────────────
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: app_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: myapp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install deps
+        run: uv sync --dev
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://app_user:ci_password@localhost:5432/myapp_test
+          SECRET_KEY: ci-test-secret-key
+        run: uv run alembic upgrade head
+
+      - name: Run pytest
+        env:
+          DATABASE_URL: postgresql+asyncpg://app_user:ci_password@localhost:5432/myapp_test
+          SECRET_KEY: ci-test-secret-key
+        run: uv run pytest tests/ -v
+
+  # ── Frontend Tests ────────────────────────────────────────────────────────
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Vitest
+        working-directory: frontend
+        run: pnpm vitest run
+
+  # ── Docker Build ──────────────────────────────────────────────────────────
+  build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint, test-backend, test-frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -f Dockerfile.backend -t my-project-backend:ci .
+
+      - name: Build frontend image
+        run: docker build -f Dockerfile.frontend -t my-project-frontend:ci ./frontend

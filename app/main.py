@@ -1,0 +1,35 @@
+import uuid
+
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.auth import router as auth_router
+from app.api.v1.health import router as health_router
+from app.core.config import settings
+
+app = FastAPI(
+    title="[PROJECT_NAME]",
+    version="0.1.0",
+    description="[PROJECT_DESCRIPTION]",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next) -> Response:
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
