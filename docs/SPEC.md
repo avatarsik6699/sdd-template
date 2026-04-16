@@ -1,88 +1,95 @@
-# ТЕХНИЧЕСКОЕ ЗАДАНИЕ (SPEC.md): `[PROJECT_NAME]`
+# TECHNICAL SPECIFICATION (SPEC.md): `[PROJECT_NAME]`
 
-## Метаданные
-| Поле | Значение |
-|------|----------|
-| Версия документа | `v1.0` |
-| Дата | `[DATE]` |
-| Архитектор / Владелец | `[OWNER]` |
-| Стек | Nuxt 4 (Vue 3.5+, TS, pnpm), FastAPI latest, SQLAlchemy 2.0 (async), PostgreSQL 18, Redis 8, Docker Compose |
-| AI-агент | Claude Code (Agent Mode) |
-| Домен | `[DOMAIN — краткое описание предметной области]` |
+> **For AI agent**: Read this file in full before starting any phase.
+> Confirm understanding of constraints and the phased development model.
+> When this file changes, run `/spec-sync [description of change]` immediately.
+
+## Metadata
+
+| Field | Value |
+|-------|-------|
+| Document Version | `v1.0` |
+| Date | `[DATE]` |
+| Architect / Owner | `[OWNER]` |
+| Contract Version | `v1.0` (see `docs/CONTEXT.md`) |
+| Stack | Nuxt 4 (Vue 3.5+, TS, pnpm), FastAPI latest, SQLAlchemy 2.0 (async), PostgreSQL 18, Redis 8, Docker Compose |
+| AI Agent | Claude Code (Agent Mode) |
+| Domain | `[DOMAIN — brief description of the subject area]` |
 
 ---
 
-## 1. Обзор проекта и цели
+## 1. Project Overview and Goals
 
-### 1.1. Проблема
-<!-- Какую проблему решает этот проект? Что происходит без него? -->
+### 1.1 Problem
+<!-- What problem does this project solve? What happens without it? -->
 
-### 1.2. Цель и метрики успеха
-<!-- Чего нужно достичь? Какие метрики подтвердят успех? -->
+### 1.2 Goal and Success Metrics
+<!-- What must be achieved? Which metrics confirm success? -->
 - ...
 
-### 1.3. Границы проекта
-| Включено | Исключено |
-|----------|-----------|
+### 1.3 Project Boundaries
+| Included | Excluded |
+|----------|----------|
 | ... | ... |
 
 ---
 
-## 2. Доменный контекст
+## 2. Domain Context
 
-### 2.1. Роли и права
-| Роль | Возможности | Ограничения |
-|------|-------------|-------------|
+### 2.1 Roles and Permissions
+| Role | Capabilities | Restrictions |
+|------|-------------|--------------|
 | `Admin` | ... | ... |
 | `Architect` | ... | ... |
 | `Expert` | ... | ... |
+| `AI_Agent` | Implements phases, runs gate checks | No push to main/develop |
 
-### 2.2. Ключевые сущности
-<!-- Перечислите основные сущности и их связи -->
+### 2.2 Key Entities
+<!-- List core entities and their relationships -->
 `Entity1 → Entity2 → Entity3`
 
 ---
 
-## 3. Модель данных (SQLAlchemy 2.0 Async)
+## 3. Data Model (SQLAlchemy 2.0 Async)
 
 ```text
-<!-- Опишите таблицы БД -->
-table_name(id UUID PK, field1 TYPE, field2 TYPE, created_at TIMESTAMPTZ)
+<!-- Describe DB tables -->
+table_name(id UUID PK, field1 TYPE NOT NULL, field2 TYPE, created_at TIMESTAMPTZ)
 ```
 
 ---
 
-## 4. API и бэкенд (FastAPI + Python)
+## 4. API and Backend (FastAPI + Python)
 
-### 4.1. Архитектура
+### 4.1 Architecture
 ```
 app/
-├── api/v1/   (routers: ...)
-├── core/     (config, auth, exceptions)
-├── db/       (async_session, models, alembic)
-├── services/ (domain services)
-└── schemas/  (Pydantic v2 request/response)
+├── api/v1/     (routers: ...)
+├── core/       (config, auth, exceptions)
+├── db/         (async_session, models, alembic)
+├── services/   (domain services)
+└── schemas/    (Pydantic v2 request/response)
 ```
 
-### 4.2. Основные эндпоинты
-| Метод | Путь | Описание |
-|-------|------|----------|
-| `GET` | `/api/v1/health` | Health check |
-| `POST` | `/api/v1/auth/login` | JWT login |
-| `GET` | `/api/v1/auth/me` | Current user |
-| ... | ... | ... |
+### 4.2 Core Endpoints
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET`  | `/api/v1/health` | — | Health check |
+| `POST` | `/api/v1/auth/login` | — | JWT login |
+| `GET`  | `/api/v1/auth/me` | JWT | Current user |
+| ... | ... | ... | ... |
 
-### 4.3. Требования к коду
-- Type hints 100%, Pydantic v2, async/await
-- Зависимости через `uv` (`pyproject.toml` + `uv.lock`); `pip-tools` не использовать
-- RBAC через FastAPI Dependencies + JWT scopes
-- No hardcoded secrets — только `.env` / Pydantic Settings
+### 4.3 Code Requirements
+- 100% type hints, Pydantic v2, async/await throughout
+- Dependencies via `uv` (`pyproject.toml` + `uv.lock`); do not use `pip-tools`
+- RBAC via FastAPI `Depends` + JWT scopes
+- No hardcoded secrets — use `.env` / Pydantic Settings only
 
 ---
 
-## 5. Фронтенд (Nuxt 4 + Vue 3.5+ + TypeScript)
+## 5. Frontend (Nuxt 4 + Vue 3.5+ + TypeScript)
 
-### 5.1. Страницы
+### 5.1 Pages
 ```
 pages/
 ├── dashboard.vue
@@ -90,65 +97,71 @@ pages/
 └── [feature]/[id].vue
 ```
 
-### 5.2. Компоненты и сторы
+### 5.2 Components and Stores
 ```
 components/
-├── ui/    (buttons, modals, toasts)
+├── ui/        (buttons, modals, toasts)
 └── [feature]/
-stores/    (Pinia: auth, ui, ...)
-composables/ (useApi, ...)
+stores/        (Pinia: auth, ui, ...)
+composables/   (useApi, ...)
 ```
 
 ---
 
-## 6. Инфраструктура и CI/CD
+## 6. Infrastructure and CI/CD
 
-### 6.1. Docker
+### 6.1 Docker
 ```
 docker-compose.yml  (backend, frontend, postgres, redis, nginx)
 Dockerfile.backend
 Dockerfile.frontend
 ```
 
-### 6.2. CI (GitHub Actions)
-- lint (ruff, tsc --noEmit)
-- test-backend (pytest + postgres service)
-- test-frontend (vitest)
-- build (docker images)
+### 6.2 CI (GitHub Actions)
+- `lint` — ruff, tsc --noEmit
+- `test-backend` — pytest + postgres service
+- `test-frontend` — vitest
+- `build` — docker images
 
 ---
 
-## 7. Тестирование
-| Уровень | Фреймворк | Покрытие |
-|---------|-----------|----------|
-| Backend Unit/Integration | pytest + asyncio | ≥70% |
-| Frontend Unit | Vitest | ≥70% |
+## 7. Non-Functional Requirements
+
+| Category | Requirement |
+|----------|-------------|
+| Security | No hardcoded secrets; bcrypt ≥12 rounds; JWT expiry ≤60 min |
+| Test coverage | Backend ≥70%, Frontend ≥70% |
+| Type safety | 100% type hints (Python), strict TypeScript |
+| Performance | Health endpoint p99 < 200ms |
+| Environments | `development`, `staging`, `production` |
 
 ---
 
-## 8. Этапы разработки (AI-Optimized Phases)
+## 8. Development Phases (AI-Optimized)
 
-> Правило для AI-агента: реализуй фазы строго по порядку. После каждой фазы запускай gate-проверки, коммить атомарно, обновляй `STATE.md`.
+> **AI agent rule**: implement phases strictly in order.
+> After each phase: run gate checks, commit atomically, update `STATE.md`.
+> Do NOT start Phase N+1 until Phase N gate is green.
+> ⚠️ When this file changes, run `/spec-sync [description]` immediately.
 
-### Фаза 1: Foundation & Core Data
-- **Scope**: Docker infra, DB models, Alembic, Auth/JWT, Nuxt skeleton
+### Phase 1: Foundation & Core Data
+- **Scope**: Docker infra, DB models, Alembic, Auth/JWT, Nuxt skeleton, CI
 - **Gate**: `docker compose up` → healthy, `pytest` → pass, `tsc --noEmit` → OK, `vitest` → pass
 
-### Фаза 2: [FEATURE]
+### Phase 2: [FEATURE]
 - **Scope**: ...
 - **Gate**: ...
 
-<!-- Добавьте фазы по мере необходимости -->
+<!-- Add phases as needed. Use /phase-init N to scaffold PHASE_XX.md -->
 
 ---
 
-## 9. Глоссарий
-| Термин | Определение |
-|--------|-------------|
-| `Gate` | Набор проверок (тесты, линт, type-check), блокирующий переход к следующей фазе |
+## 9. Glossary
+
+| Term | Definition |
+|------|------------|
+| `Gate` | Set of checks (tests, lint, type-check) that must pass before moving to the next phase |
+| `CONTEXT.md` | Living technical contract: current DB schema, active endpoints, TS types, env vars |
+| `STATE.md` | Operational tracker: phase statuses, blockers, expert feedback |
+| `CHANGELOG.md` | History of spec/architecture changes and their impact |
 | ... | ... |
-
----
-
-> **Инструкция для AI-агента:**
-> Прочитайте SPEC.md полностью. Подтвердите понимание ограничений и модели фазовой разработки. Начните с Фазы 1. НЕ генерируйте Фазу 2+ пока не пройдены gate-проверки Фазы 1. Сначала план → ожидание подтверждения → код → тесты → коммит.

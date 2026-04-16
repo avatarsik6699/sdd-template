@@ -1,5 +1,11 @@
 {
-  "version": "0.0.0",
+  "_meta": {
+    "version": "v1.0",
+    "format": "SDD CONTEXT.md — Single Source of Truth for AI agent",
+    "update_rule": "Bump version on schema/API/type changes. Use /context-update skill after each phase.",
+    "version_scheme": "patch (v1.0→v1.1) = additive only; minor (v1.1→v1.2) = breaking change"
+  },
+
   "captured_at": "[DATE]",
   "phase_completed": null,
   "phase_in_progress": null,
@@ -15,14 +21,14 @@
   },
 
   "core_models": [
-    "User (id, email UNIQUE, hashed_password, role ENUM[admin/architect/expert/ai_agent], is_active)"
+    "User (id UUID PK, email UNIQUE, hashed_password, role ENUM[admin/architect/expert/ai_agent], is_active, created_at, updated_at)"
   ],
 
   "endpoints_active": [
     "GET  /api/v1/health",
     "POST /api/v1/auth/login  — email+password → JWT access_token",
-    "GET  /api/v1/auth/me     — current user",
-    "POST /api/v1/auth/logout — stateless stub"
+    "GET  /api/v1/auth/me     — current user (JWT required)",
+    "POST /api/v1/auth/logout — stateless stub (JWT required)"
   ],
 
   "db_schema": {
@@ -33,7 +39,7 @@
 
   "ui_pages_active": [
     "/login     — auth form (blank layout)",
-    "/dashboard — stub (default layout)"
+    "/dashboard — stub (default layout, JWT required)"
   ],
 
   "env_config": {
@@ -48,5 +54,5 @@
     "default_admin": "admin@example.com / changeme123 (migration 0001)"
   },
 
-  "notes": "Initial template state. Update this file after each phase is completed."
+  "notes": "Initial template state. Run /context-update N after each phase is completed."
 }
