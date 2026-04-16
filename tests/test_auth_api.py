@@ -13,6 +13,7 @@ from app.db.models.user import User, UserRole
 @pytest.fixture()
 async def admin_user(db_session: AsyncSession) -> User:
     from uuid import uuid4
+
     unique = uuid4().hex[:8]
     user = User(
         email=f"test_admin_{unique}@example.com",
@@ -63,7 +64,9 @@ async def test_login_unknown_email(client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
-async def test_me_with_valid_token(client: AsyncClient, admin_user: User, admin_headers: dict) -> None:
+async def test_me_with_valid_token(
+    client: AsyncClient, admin_user: User, admin_headers: dict
+) -> None:
     resp = await client.get("/api/v1/auth/me", headers=admin_headers)
     assert resp.status_code == 200
     data = resp.json()

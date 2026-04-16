@@ -18,6 +18,7 @@ if TEST_DATABASE_URL.startswith("sqlite"):
     from sqlalchemy.dialects.sqlite.base import SQLiteTypeCompiler
 
     if not hasattr(SQLiteTypeCompiler, "visit_JSONB"):
+
         def _visit_JSONB(self, type_, **kw):  # noqa: N802
             return "JSON"
 

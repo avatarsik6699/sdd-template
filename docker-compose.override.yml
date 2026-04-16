@@ -1,0 +1,18 @@
+# Applied automatically by Docker Compose in development.
+# Never used in production deploys.
+services:
+  backend:
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+      target: dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: ["pnpm", "dev", "--host"]

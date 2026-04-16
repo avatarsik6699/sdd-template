@@ -1,4 +1,6 @@
+import logging
 import uuid
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.auth import router as auth_router
 from app.api.v1.health import router as health_router
 from app.core.config import settings
+
+logging.basicConfig(
+    level=settings.LOG_LEVEL.upper(),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 app = FastAPI(
     title="[PROJECT_NAME]",
@@ -23,7 +30,7 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def add_request_id(request: Request, call_next) -> Response:
+async def add_request_id(request: Request, call_next: Any) -> Response:
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.request_id = request_id
     response = await call_next(request)

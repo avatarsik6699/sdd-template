@@ -28,7 +28,7 @@ docker --version        # Docker 24+
 docker compose version  # v2+
 uv --version            # any recent
 node --version          # 22+
-pnpm --version          # 9+
+pnpm --version          # 10+
 ```
 
 ### 2. Environment
@@ -36,47 +36,46 @@ pnpm --version          # 9+
 ```bash
 cp .env.example .env
 # Generate a secure SECRET_KEY:
-python -c "import secrets; print(secrets.token_hex(32))"
+echo "import secrets; print(secrets.token_hex(32))" | uv run -
 # Paste the result into SECRET_KEY= in .env
 ```
 
-### 3. Start infrastructure
+### 3. Start dev stack
 
 ```bash
-docker compose up -d db redis
-docker compose ps   # both should show: healthy
+docker compose up --build
+# Backend:  http://localhost:8000
+# Frontend: http://localhost:3000
 ```
 
-### 4. Run migrations
+Migrations run automatically on backend startup. Hot-reload is active for both services — changes to `app/` and `frontend/` are reflected immediately without restarting containers.
 
-```bash
-DATABASE_URL=postgresql+asyncpg://app_user:changeme@localhost:5432/myapp \
-  uv run alembic upgrade head
-```
+---
 
-### 5. Run backend
+## First-time local setup (for IDE and git hooks)
+
+These steps are needed once after cloning. They do not affect Docker — they set up your local editor and git workflow.
+
+### Install Python dependencies (for IntelliSense and mypy)
 
 ```bash
 uv sync --dev
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# VS Code: Ctrl+Shift+P → "Python: Select Interpreter" → select .venv/bin/python
 ```
 
-### 6. Run frontend
+### Install frontend dependencies (for TypeScript and Vue IntelliSense)
 
 ```bash
-cd frontend
-pnpm install
-pnpm dev
+cd frontend && pnpm install
 ```
 
-### 7. Full Docker stack
+### Activate pre-commit hooks
 
 ```bash
-docker compose up -d --build
-# Backend:  http://localhost:8000
-# Frontend: http://localhost:3000
-# Via nginx: http://localhost
+uv run pre-commit install
 ```
+
+After this, ruff linting and formatting run automatically before every `git commit`.
 
 ---
 
