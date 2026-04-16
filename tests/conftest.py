@@ -1,4 +1,3 @@
-import asyncio
 import os
 
 import pytest
@@ -34,17 +33,15 @@ from app.main import app  # noqa: E402
 
 
 @pytest.fixture(scope="session")
-def test_engine():
-    # Synchronous fixture so it carries no event loop binding.
+async def test_engine():
+    # Async session-scoped fixture so the engine is created and used entirely
+    # within pytest-asyncio's session event loop — no loop boundary crossings.
     #
-    # PostgreSQL — NullPool is critical: without it asyncpg caches connections
-    # in the session loop (loop A), then each test runs in its own function loop
-    # (loop B) and hits "Future attached to a different loop". NullPool forces
-    # every db_session to open a fresh connection in the current test's loop.
+    # PostgreSQL — NullPool prevents asyncpg from caching connections across
+    # tests; each db_session opens a fresh connection in the current loop.
     #
     # SQLite — StaticPool shares one in-memory DB across all connections.
-    # aiosqlite is thread-based and has no event-loop affinity, so StaticPool
-    # is safe here even across loop boundaries.
+    # aiosqlite is thread-based and has no event-loop affinity.
     if TEST_DATABASE_URL.startswith("sqlite"):
         engine = create_async_engine(
             TEST_DATABASE_URL,
@@ -55,19 +52,14 @@ def test_engine():
     else:
         engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 
-    async def _create_tables() -> None:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    asyncio.run(_create_tables())
     yield engine
 
-    async def _drop_tables() -> None:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-        await engine.dispose()
-
-    asyncio.run(_drop_tables())
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 
 @pytest.fixture()
