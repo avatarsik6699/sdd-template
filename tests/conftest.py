@@ -33,11 +33,6 @@ from app.main import app  # noqa: E402
 
 
 @pytest.fixture(scope="session")
-def anyio_backend():
-    return "asyncio"
-
-
-@pytest.fixture(scope="session")
 async def test_engine():
     kwargs = {}
     if TEST_DATABASE_URL.startswith("sqlite"):

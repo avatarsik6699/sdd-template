@@ -33,7 +33,6 @@ def admin_headers(admin_user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.mark.anyio
 async def test_login_success(client: AsyncClient, admin_user: User) -> None:
     resp = await client.post(
         "/api/v1/auth/login",
@@ -45,7 +44,6 @@ async def test_login_success(client: AsyncClient, admin_user: User) -> None:
     assert data["token_type"] == "bearer"
 
 
-@pytest.mark.anyio
 async def test_login_wrong_password(client: AsyncClient, admin_user: User) -> None:
     resp = await client.post(
         "/api/v1/auth/login",
@@ -54,7 +52,6 @@ async def test_login_wrong_password(client: AsyncClient, admin_user: User) -> No
     assert resp.status_code == 401
 
 
-@pytest.mark.anyio
 async def test_login_unknown_email(client: AsyncClient) -> None:
     resp = await client.post(
         "/api/v1/auth/login",
@@ -63,7 +60,6 @@ async def test_login_unknown_email(client: AsyncClient) -> None:
     assert resp.status_code == 401
 
 
-@pytest.mark.anyio
 async def test_me_with_valid_token(
     client: AsyncClient, admin_user: User, admin_headers: dict
 ) -> None:
@@ -75,19 +71,16 @@ async def test_me_with_valid_token(
     assert data["is_active"] is True
 
 
-@pytest.mark.anyio
 async def test_me_without_token(client: AsyncClient) -> None:
     resp = await client.get("/api/v1/auth/me")
     assert resp.status_code == 401
 
 
-@pytest.mark.anyio
 async def test_logout_with_valid_token(client: AsyncClient, admin_headers: dict) -> None:
     resp = await client.post("/api/v1/auth/logout", headers=admin_headers)
     assert resp.status_code == 200
 
 
-@pytest.mark.anyio
 async def test_logout_without_token(client: AsyncClient) -> None:
     resp = await client.post("/api/v1/auth/logout")
     assert resp.status_code == 401
