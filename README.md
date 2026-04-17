@@ -2,7 +2,27 @@
 
 > SDD template — FastAPI + Nuxt 4 + PostgreSQL + Docker + GitHub Actions
 
-Replace `[PROJECT_NAME]` everywhere with your actual project name before starting development.
+---
+
+## Getting Started
+
+Run the init script once after cloning. It replaces all placeholders and creates `.env`:
+
+```bash
+./scripts/init-project.sh <project-slug> <domain> [admin-email]
+
+# Example:
+./scripts/init-project.sh user-dashboard example.com admin@example.com
+```
+
+The script:
+- Derives a display name from the slug (`user-dashboard` → `User Dashboard`)
+- Generates a random `SECRET_KEY` and `POSTGRES_PASSWORD`
+- Creates `.env` from `.env.example` with all values filled in
+- Replaces placeholders in source files, `nginx.conf`, CI workflow, and docs
+- Copies `CLAUDE.md` to the project root
+
+After the script, configure [GitHub Secrets](#deployment) and run `docker compose up --build`.
 
 ---
 

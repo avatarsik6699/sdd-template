@@ -72,7 +72,6 @@ When `docs/SPEC.md` is modified:
 | `/phase-gate [N]` | Before committing phase work |
 | `/context-update [N]` | After phase gate passes |
 | `/phase-init [N]` | To scaffold the next phase document |
-| `/my-review [file]` | Code review of specific files |
 
 ---
 
