@@ -201,10 +201,10 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 В шаблоне `nginx.conf` стоит плейсхолдер `[DOMAIN]` — заменить на реальный домен:
 
 ```bash
-sed -i 's/\[DOMAIN\]/ваш-домен.ru/g' nginx.conf
+sed -i 's/\[DOMAIN\]/ваш-домен.ru/g' nginx/nginx.conf
 
 # Проверить
-grep server_name nginx.conf
+grep server_name nginx/nginx.conf
 # Должно быть: server_name ваш-домен.ru www.ваш-домен.ru;
 ```
 
