@@ -143,19 +143,36 @@ rm docker-compose.override.yml
 
 ### Создание `.env`
 
+**Рекомендуется:** используйте скрипт, который сам сгенерирует все секреты и заполнит production-значения:
+
+```bash
+./scripts/setup-prod.sh ваш-домен.ru admin@ваш-домен.ru
+```
+
+Скрипт автоматически:
+- генерирует `SECRET_KEY`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`
+- выставляет `APP_ENV=production`, `NUXT_PUBLIC_API_BASE`, `CORS_ORIGINS`
+- заменяет `[DOMAIN]` в `nginx.conf`
+- удаляет `docker-compose.override.yml`
+
+**Вручную** (если нужен полный контроль):
+
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Заполните все значения. Ключевые для production:
+Ключевые значения для production:
 
 ```bash
-# База данных — сгенерировать надёжный пароль
+# База данных
 POSTGRES_PASSWORD=<вывод openssl rand -hex 32>
 DATABASE_URL=postgresql+asyncpg://app_user:<пароль>@db:5432/myapp
 
-# Auth — сгенерировать секретный ключ
+# Redis
+REDIS_PASSWORD=<вывод openssl rand -hex 16>
+
+# Auth
 SECRET_KEY=<вывод python3 -c "import secrets; print(secrets.token_hex(32))">
 
 # Production-режим
@@ -164,9 +181,9 @@ APP_ENV=production
 # Домен
 DOMAIN=ваш-домен.ru
 
-# URL API для браузерного клиента Nuxt
+# URL API для браузерного клиента Nuxt (без /api — иначе дублирование в запросах)
 # Nuxt автоматически маппит NUXT_PUBLIC_* → runtimeConfig.public.*
-NUXT_PUBLIC_API_BASE=https://ваш-домен.ru/api
+NUXT_PUBLIC_API_BASE=https://ваш-домен.ru
 
 # CORS — разрешить только ваш домен
 CORS_ORIGINS=["https://ваш-домен.ru","https://www.ваш-домен.ru"]
@@ -483,8 +500,8 @@ docker compose restart backend
 
 **Решение:**
 ```bash
-# В .env на сервере:
-NUXT_PUBLIC_API_BASE=https://ваш-домен.ru/api
+# В .env на сервере (без /api — иначе запросы уходят на /api/api/...):
+NUXT_PUBLIC_API_BASE=https://ваш-домен.ru
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend
 ```
@@ -569,8 +586,8 @@ fingerprint: ${{ secrets.VPS_FINGERPRINT }}
 **Проект:**
 - [ ] Репозиторий склонирован в `/opt/ваш-проект`
 - [ ] `docker-compose.override.yml` удалён с сервера
-- [ ] `.env` создан, все значения заполнены
-- [ ] `[DOMAIN]` заменён в `nginx.conf`
+- [ ] `.env` создан (`./scripts/setup-prod.sh ваш-домен.ru`), все значения заполнены
+- [ ] `[DOMAIN]` заменён в `nginx.conf` (скрипт делает это автоматически)
 
 **SSL и запуск:**
 - [ ] SSL-сертификат выпущен через certbot standalone
