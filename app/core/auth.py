@@ -11,7 +11,7 @@ from app.core.config import settings
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-class Role(str, enum.Enum):
+class Role(enum.StrEnum):
     admin = "admin"
     architect = "architect"
     expert = "expert"
