@@ -119,8 +119,7 @@ Change these in `alembic/versions/0001_users_table.py` before going to productio
 │       ├── spec-sync/       # /spec-sync  — propagate SPEC.md changes
 │       ├── phase-gate/      # /phase-gate — run all gate checks
 │       ├── context-update/  # /context-update — update CONTEXT.md after phase
-│       ├── phase-init/      # /phase-init — scaffold next PHASE_XX.md
-│       └── my-review/       # /my-review  — code review
+│       └── phase-init/      # /phase-init — scaffold next PHASE_XX.md
 ├── app/                     # FastAPI backend
 │   ├── api/v1/              # Routers (health, auth + your routers)
 │   ├── core/                # config.py, auth.py

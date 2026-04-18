@@ -15,11 +15,11 @@
 
 ### Минимальный пример
 
-Создайте `~/.claude/skills/my-review/SKILL.md`:
+Создайте `~/.claude/skills/code-review/SKILL.md`:
 
 ```markdown
 ---
-name: my-review
+name: code-review
 description: Проверить код на качество и безопасность. Используй при code review.
 ---
 
@@ -30,7 +30,7 @@ description: Проверить код на качество и безопасн
 4. Предложи улучшения
 ```
 
-Использование: `/my-review src/auth.py`
+Использование: `/code-review src/auth.py`
 
 ---
 
