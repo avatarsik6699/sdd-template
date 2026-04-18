@@ -85,6 +85,7 @@ command -v python3 &>/dev/null || die "python3 is required to generate secrets."
 
 SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
+REDIS_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
 
 # ── banner ────────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,8 @@ cp .env.example .env
 
 # Replace DB name (handles both POSTGRES_DB=myapp and myapp in DATABASE_URL)
 sedi "s|myapp|$DB_NAME|g" .env
-# Replace passwords
+# Replace passwords — order matters: more specific patterns first
+sedi "s|changeme_redis|$REDIS_PASSWORD|g" .env
 sedi "s|changeme|$DB_PASSWORD|g" .env
 sedi "s|CHANGE_ME_generate_a_secure_random_hex_string|$SECRET_KEY|g" .env
 # Replace domain placeholders
@@ -147,10 +149,10 @@ sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" frontend/app/pages/dashboard.vue
 sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" frontend/app/pages/login.vue
 echo "  ✓ frontend/"
 
-# ── nginx.conf ────────────────────────────────────────────────────────────────
+# ── nginx/nginx.conf ──────────────────────────────────────────────────────────
 
-sedi "s|\[DOMAIN\]|$DOMAIN|g" nginx.conf
-echo "  ✓ nginx.conf"
+sedi "s|\[DOMAIN\]|$DOMAIN|g" nginx/nginx.conf
+echo "  ✓ nginx/nginx.conf"
 
 # ── .github/workflows/ci.yml ─────────────────────────────────────────────────
 

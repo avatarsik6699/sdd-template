@@ -7,7 +7,7 @@ services:
 
   redis:
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   backend:
     ports:
@@ -28,3 +28,6 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: ["pnpm", "dev", "--host"]
+
+  nginx:
+    command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/project/nginx.dev.conf"]
