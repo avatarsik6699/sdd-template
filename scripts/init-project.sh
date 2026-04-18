@@ -49,11 +49,16 @@ to_db_name() {
 [[ $# -lt 2 ]] && { echo "Error: at least 2 arguments required."; echo; usage; }
 
 PROJECT_SLUG="$1"
-DOMAIN="$2"
+DOMAIN="${2#http://}"
+DOMAIN="${DOMAIN#https://}"
+DOMAIN="${DOMAIN%/}"
 ADMIN_EMAIL="${3:-admin@example.com}"
 
 [[ "$PROJECT_SLUG" =~ ^[a-z][a-z0-9-]+$ ]] \
   || die "project-slug must be lowercase kebab-case (e.g. my-app). Got: '$PROJECT_SLUG'"
+
+[[ "$DOMAIN" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]] \
+  || die "domain must be a bare hostname without protocol (e.g. example.com). Got: '$DOMAIN'"
 
 # ── derived values ────────────────────────────────────────────────────────────
 
@@ -117,6 +122,17 @@ echo "  ✓ README.md"
 sedi "s|name = \"my-project\"|name = \"$PROJECT_SLUG\"|g" pyproject.toml
 sedi "s|\[PROJECT_NAME\] backend|$PROJECT_DISPLAY backend|g" pyproject.toml
 echo "  ✓ pyproject.toml"
+
+# ── regenerate uv.lock ────────────────────────────────────────────────────────
+# pyproject.toml was renamed; uv.lock must be updated or `uv sync --frozen`
+# (used inside Dockerfile.backend) will fail with "Missing workspace member".
+
+if command -v uv &>/dev/null; then
+  uv lock --quiet
+  echo "  ✓ uv.lock (regenerated)"
+else
+  echo "  ⚠ uv not found — run 'uv lock' before docker compose up --build"
+fi
 
 # ── app/main.py ───────────────────────────────────────────────────────────────
 
