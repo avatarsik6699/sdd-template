@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
   plugins: [vue()],
@@ -7,4 +7,4 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
   },
-})
+});

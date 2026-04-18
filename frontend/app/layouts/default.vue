@@ -1,12 +1,12 @@
 <script setup lang="ts">
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 
 onMounted(() => {
-  authStore.loadFromStorage()
+  authStore.loadFromStorage();
   if (authStore.isAuthenticated && !authStore.user) {
-    authStore.fetchMe()
+    authStore.fetchMe();
   }
-})
+});
 </script>
 
 <template>
@@ -30,7 +30,9 @@ onMounted(() => {
       <div class="border-t border-gray-100 pt-4 mt-4">
         <div v-if="authStore.user" class="mb-2">
           <p class="text-xs text-gray-500 truncate">{{ authStore.user.email }}</p>
-          <span class="inline-block text-xs font-medium text-indigo-600 bg-indigo-50 rounded px-1.5 py-0.5 mt-0.5">
+          <span
+            class="inline-block text-xs font-medium text-indigo-600 bg-indigo-50 rounded px-1.5 py-0.5 mt-0.5"
+          >
             {{ authStore.user.role }}
           </span>
         </div>

@@ -1,31 +1,31 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'blank' })
+definePageMeta({ layout: 'blank' });
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 
-const email = ref('')
-const password = ref('')
-const errorMsg = ref<string | null>(null)
+const email = ref('');
+const password = ref('');
+const errorMsg = ref<string | null>(null);
 
 // If already authenticated, redirect to dashboard.
 onMounted(() => {
-  authStore.loadFromStorage()
+  authStore.loadFromStorage();
   if (authStore.isAuthenticated) {
-    navigateTo('/dashboard')
+    navigateTo('/dashboard');
   }
-})
+});
 
 async function handleLogin() {
   if (!email.value.trim() || !password.value) {
-    errorMsg.value = 'Email and password are required.'
-    return
+    errorMsg.value = 'Email and password are required.';
+    return;
   }
-  errorMsg.value = null
+  errorMsg.value = null;
   try {
-    await authStore.login(email.value.trim(), password.value)
-    navigateTo('/dashboard')
+    await authStore.login(email.value.trim(), password.value);
+    navigateTo('/dashboard');
   } catch {
-    errorMsg.value = 'Invalid email or password. Please try again.'
+    errorMsg.value = 'Invalid email or password. Please try again.';
   }
 }
 </script>

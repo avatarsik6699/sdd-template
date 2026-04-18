@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore } from 'pinia';
 
 export const useUiStore = defineStore('ui', {
   state: () => ({
@@ -6,7 +6,7 @@ export const useUiStore = defineStore('ui', {
   }),
   actions: {
     setLoading(value: boolean) {
-      this.isLoading = value
+      this.isLoading = value;
     },
   },
-})
+});

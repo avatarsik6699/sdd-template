@@ -1,20 +1,20 @@
-import { defineStore } from 'pinia'
+import { defineStore } from 'pinia';
 
 export interface AuthUser {
-  id: string
-  email: string
-  role: 'admin' | 'architect' | 'expert' | 'ai_agent'
-  is_active: boolean
+  id: string;
+  email: string;
+  role: 'admin' | 'architect' | 'expert' | 'ai_agent';
+  is_active: boolean;
 }
 
 interface AuthState {
-  token: string | null
-  user: AuthUser | null
-  isLoading: boolean
-  error: string | null
+  token: string | null;
+  user: AuthUser | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
-const TOKEN_KEY = 'app_token'
+const TOKEN_KEY = 'app_token';
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
@@ -33,63 +33,60 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     loadFromStorage() {
       if (import.meta.client) {
-        const stored = localStorage.getItem(TOKEN_KEY)
+        const stored = localStorage.getItem(TOKEN_KEY);
         if (stored) {
-          this.token = stored
+          this.token = stored;
         }
       }
     },
 
     async login(email: string, password: string): Promise<void> {
-      this.isLoading = true
-      this.error = null
+      this.isLoading = true;
+      this.error = null;
       try {
-        const config = useRuntimeConfig()
+        const config = useRuntimeConfig();
         const data = await $fetch<{ access_token: string; token_type: string }>(
           `${config.public.apiBase}/api/v1/auth/login`,
           {
             method: 'POST',
             body: { email, password },
           }
-        )
-        this.token = data.access_token
+        );
+        this.token = data.access_token;
         if (import.meta.client) {
-          localStorage.setItem(TOKEN_KEY, data.access_token)
+          localStorage.setItem(TOKEN_KEY, data.access_token);
         }
-        await this.fetchMe()
+        await this.fetchMe();
       } catch (err: unknown) {
-        this.error = err instanceof Error ? err.message : 'Login failed'
-        throw err
+        this.error = err instanceof Error ? err.message : 'Login failed';
+        throw err;
       } finally {
-        this.isLoading = false
+        this.isLoading = false;
       }
     },
 
     async fetchMe(): Promise<void> {
-      if (!this.token) return
+      if (!this.token) return;
       try {
-        const config = useRuntimeConfig()
-        const data = await $fetch<AuthUser>(
-          `${config.public.apiBase}/api/v1/auth/me`,
-          {
-            headers: { Authorization: `Bearer ${this.token}` },
-          }
-        )
-        this.user = data
+        const config = useRuntimeConfig();
+        const data = await $fetch<AuthUser>(`${config.public.apiBase}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${this.token}` },
+        });
+        this.user = data;
       } catch {
         // Token expired or invalid — clear auth
-        this.logout()
+        this.logout();
       }
     },
 
     logout() {
-      this.token = null
-      this.user = null
-      this.error = null
+      this.token = null;
+      this.user = null;
+      this.error = null;
       if (import.meta.client) {
-        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(TOKEN_KEY);
       }
-      navigateTo('/login')
+      navigateTo('/login');
     },
   },
-})
+});

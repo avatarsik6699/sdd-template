@@ -7,48 +7,24 @@ on:
     branches: [main]
 
 jobs:
-  # ── Lint ─────────────────────────────────────────────────────────────────
-  lint:
-    name: Lint
+  # ── Backend Lint ──────────────────────────────────────────────────────────
+  lint-backend:
+    name: Backend Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           python-version: "3.13"
+          enable-cache: true
 
       - name: Install backend deps
         run: uv sync --dev
 
       - name: Ruff lint
         run: uv run ruff check app/ tests/
-
-      - name: Set up Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@10.33.0 --activate
-
-      - name: Install frontend deps
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
-
-      - name: Nuxt prepare (generate types)
-        working-directory: frontend
-        run: pnpm nuxt prepare
-
-      - name: TypeScript check
-        working-directory: frontend
-        run: pnpm exec tsc --noEmit
 
   # ── Backend Tests ─────────────────────────────────────────────────────────
   test-backend:
@@ -71,15 +47,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           python-version: "3.13"
+          enable-cache: true
 
       - name: Install deps
         run: uv sync --dev
@@ -96,9 +68,9 @@ jobs:
           SECRET_KEY: ci-test-secret-key
         run: uv run pytest tests/ -v
 
-  # ── Frontend Tests ────────────────────────────────────────────────────────
-  test-frontend:
-    name: Frontend Tests
+  # ── Frontend (Lint + Tests) ───────────────────────────────────────────────
+  frontend:
+    name: Frontend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +79,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Enable pnpm
         run: corepack enable && corepack prepare pnpm@10.33.0 --activate
@@ -114,6 +88,18 @@ jobs:
       - name: Install deps
         working-directory: frontend
         run: pnpm install --frozen-lockfile
+
+      - name: Nuxt prepare (generate types)
+        working-directory: frontend
+        run: pnpm nuxt prepare
+
+      - name: ESLint
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: TypeScript check
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
 
       - name: Vitest
         working-directory: frontend
@@ -123,7 +109,7 @@ jobs:
   build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [lint, test-backend, test-frontend]
+    needs: [lint-backend, test-backend, frontend]
     steps:
       - uses: actions/checkout@v4
 

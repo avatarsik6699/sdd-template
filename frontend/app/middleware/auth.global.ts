@@ -1,15 +1,15 @@
 export default defineNuxtRouteMiddleware((to) => {
   // Skip auth check on login page.
-  if (to.path === '/login') return
+  if (to.path === '/login') return;
 
-  const authStore = useAuthStore()
+  const authStore = useAuthStore();
 
   // On client: load token from localStorage before checking.
   if (import.meta.client) {
-    authStore.loadFromStorage()
+    authStore.loadFromStorage();
   }
 
   if (!authStore.isAuthenticated) {
-    return navigateTo('/login')
+    return navigateTo('/login');
   }
-})
+});
