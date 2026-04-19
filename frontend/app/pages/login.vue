@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { definePageMeta, navigateTo } from '#imports';
 import { useAuthStore } from '~/stores/auth';
 import { ref, onMounted } from 'vue';
 

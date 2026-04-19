@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import { useI18n } from '#imports';
 import { useAuthStore } from '~/stores/auth';
 import { onMounted } from 'vue';
 
 const authStore = useAuthStore();
+const { locale, locales, setLocale, t } = useI18n();
+const colorMode = useColorMode();
+
+const availableLocales = locales.value.map((item) => item.code);
 
 onMounted(() => {
   authStore.loadFromStorage();
@@ -10,41 +15,80 @@ onMounted(() => {
     authStore.fetchMe();
   }
 });
+
+const isDark = computed({
+  get() {
+    return colorMode.value === 'dark';
+  },
+  set() {
+    colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+  },
+});
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-gray-50">
+  <div
+    class="min-h-screen flex bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors"
+  >
     <!-- Sidebar -->
-    <aside class="w-56 bg-white border-r border-gray-200 flex flex-col p-4 shrink-0">
-      <div class="text-lg font-bold text-indigo-600 mb-6">[PROJECT_NAME]</div>
+    <aside
+      class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col p-4 shrink-0"
+    >
+      <div
+        class="text-lg font-bold text-primary-600 dark:text-primary-400 mb-6 flex items-center justify-between"
+      >
+        <span>[PROJECT_NAME]</span>
+        <UButton
+          :icon="isDark ? 'i-heroicons-moon-20-solid' : 'i-heroicons-sun-20-solid'"
+          color="neutral"
+          variant="ghost"
+          aria-label="Theme"
+          @click="isDark = !isDark"
+        />
+      </div>
 
-      <!-- Navigation — add your project's links here -->
+      <!-- Navigation -->
       <nav class="flex flex-col gap-1 flex-1">
         <NuxtLink
           to="/dashboard"
-          class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-          active-class="bg-indigo-50 text-indigo-700"
+          class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/50 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+          active-class="bg-primary-50 dark:bg-primary-900 text-primary-700 dark:text-primary-300"
         >
-          Dashboard
+          {{ t('welcome') }}
         </NuxtLink>
       </nav>
 
-      <!-- User section -->
-      <div class="border-t border-gray-100 pt-4 mt-4">
+      <!-- Settings / Lang -->
+      <div class="flex flex-col gap-4 mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2">
+          <UIcon name="i-heroicons-language" class="text-gray-400" />
+          <USelect
+            option-attribute="name"
+            size="xs"
+            value-attribute="code"
+            :model-value="locale"
+            :items="availableLocales"
+            @update:model-value="setLocale"
+          />
+        </div>
+
+        <!-- User section -->
         <div v-if="authStore.user" class="mb-2">
           <p class="text-xs text-gray-500 truncate">{{ authStore.user.email }}</p>
-          <span
-            class="inline-block text-xs font-medium text-indigo-600 bg-indigo-50 rounded px-1.5 py-0.5 mt-0.5"
-          >
+          <UBadge size="xs" variant="subtle" class="mt-1">
             {{ authStore.user.role }}
-          </span>
+          </UBadge>
         </div>
-        <button
-          class="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+        <UButton
+          color="error"
+          variant="ghost"
+          block
+          size="sm"
+          icon="i-heroicons-arrow-left-on-rectangle"
           @click="authStore.logout()"
         >
-          Sign out
-        </button>
+          {{ t('login') }} (Logout)
+        </UButton>
       </div>
     </aside>
 

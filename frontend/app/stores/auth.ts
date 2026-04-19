@@ -47,15 +47,15 @@ export const useAuthStore = defineStore('auth', {
         const { $api } = useNuxtApp();
 
         // Use URLSearchParams because FastAPI OAuth2 expects application/x-www-form-urlencoded
-        const formData = new URLSearchParams();
-        formData.append('username', email);
-        formData.append('password', password);
 
         const data = await $api<{ access_token: string; token_type: string }>(
           '/api/v1/auth/login',
           {
             method: 'POST',
-            body: formData,
+            body: {
+              email: email,
+              password: password,
+            },
           }
         );
 

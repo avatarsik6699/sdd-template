@@ -3,14 +3,32 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
-
-  imports: {
-    autoImport: false,
+  future: {
+    compatibilityVersion: 4,
   },
 
-  components: {
-    dirs: [],
+  modules: ['@nuxt/ui', '@nuxtjs/i18n', '@pinia/nuxt'],
+  css: ['~/assets/css/main.css'],
+
+  i18n: {
+    locales: [
+      { code: 'en', language: 'en-US', file: 'en.json', name: 'English' },
+      { code: 'ru', language: 'ru-RU', file: 'ru.json', name: 'Русский' },
+    ],
+    defaultLocale: 'en',
+    strategy: 'prefix_except_default',
+    langDir: 'locales',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_redirected',
+      redirectOn: 'root',
+    },
+  },
+
+  colorMode: {
+    preference: 'system',
+    fallback: 'light',
+    classSuffix: '',
   },
 
   runtimeConfig: {

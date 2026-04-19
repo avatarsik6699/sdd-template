@@ -18,7 +18,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    // Note: We use the Dockerized frontend URL by default. 
+    // Note: We use the Dockerized frontend URL by default.
     // If you run it via standard Nuxt dev server without Docker, it might be http://localhost:3000
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
 

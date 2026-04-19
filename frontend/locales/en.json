@@ -1,0 +1,9 @@
+{
+  "welcome": "Welcome to Nuxt 4",
+  "login": "Login",
+  "theme": {
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

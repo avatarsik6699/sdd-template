@@ -31,3 +31,4 @@ Thumbs.db
 # Docker volumes / generated
 pgdata/
 # uv.lock
+TODO.md
