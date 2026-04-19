@@ -1,5 +1,11 @@
+import { navigateTo, useNuxtApp } from '#imports';
 import { defineStore } from 'pinia';
-import { useRuntimeConfig, navigateTo } from '#imports';
+import { safeCookie } from '~/utils/safeCookie';
+
+export const AUTH_COOKIE_CONFIG = {
+  key: 'app_token',
+  version: '1.0',
+};
 
 export interface AuthUser {
   id: string;
@@ -9,54 +15,59 @@ export interface AuthUser {
 }
 
 interface AuthState {
-  token: string | null;
   user: AuthUser | null;
   isLoading: boolean;
   error: string | null;
 }
 
-const TOKEN_KEY = 'app_token';
-
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
-    token: null,
     user: null,
     isLoading: false,
     error: null,
   }),
 
   getters: {
-    isAuthenticated: (state): boolean => !!state.token,
-    authHeader: (state): Record<string, string> =>
-      state.token ? { Authorization: `Bearer ${state.token}` } : {},
+    isAuthenticated: (): boolean =>
+      !!safeCookie.getItem<string>({ keyWithVersion: AUTH_COOKIE_CONFIG }),
+    token: (): string | undefined =>
+      safeCookie.getItem<string>({ keyWithVersion: AUTH_COOKIE_CONFIG }),
   },
 
   actions: {
+    // Left for backwards compatibility if called elsewhere, though tokens are now auto-managed by cookies
     loadFromStorage() {
-      if (import.meta.client) {
-        const stored = localStorage.getItem(TOKEN_KEY);
-        if (stored) {
-          this.token = stored;
-        }
-      }
+      // Cookies are automatically loaded, nothing to do here
     },
 
     async login(email: string, password: string): Promise<void> {
       this.isLoading = true;
       this.error = null;
       try {
-        const config = useRuntimeConfig();
-        const data = await $fetch<{ access_token: string; token_type: string }>(
-          `${config.public.apiBase}/api/v1/auth/login`,
+        const { $api } = useNuxtApp();
+
+        // Use URLSearchParams because FastAPI OAuth2 expects application/x-www-form-urlencoded
+        const formData = new URLSearchParams();
+        formData.append('username', email);
+        formData.append('password', password);
+
+        const data = await $api<{ access_token: string; token_type: string }>(
+          '/api/v1/auth/login',
           {
             method: 'POST',
-            body: { email, password },
+            body: formData,
           }
         );
-        this.token = data.access_token;
-        if (import.meta.client) {
-          localStorage.setItem(TOKEN_KEY, data.access_token);
-        }
+
+        safeCookie.setItem({
+          keyWithVersion: AUTH_COOKIE_CONFIG,
+          value: data.access_token,
+          options: {
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: '/',
+          },
+        });
+
         await this.fetchMe();
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Login failed';
@@ -67,12 +78,10 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchMe(): Promise<void> {
-      if (!this.token) return;
+      if (!this.isAuthenticated) return;
       try {
-        const config = useRuntimeConfig();
-        const data = await $fetch<AuthUser>(`${config.public.apiBase}/api/v1/auth/me`, {
-          headers: { Authorization: `Bearer ${this.token}` },
-        });
+        const { $api } = useNuxtApp();
+        const data = await $api<AuthUser>('/api/v1/auth/me');
         this.user = data;
       } catch {
         // Token expired or invalid — clear auth
@@ -81,12 +90,9 @@ export const useAuthStore = defineStore('auth', {
     },
 
     logout() {
-      this.token = null;
       this.user = null;
       this.error = null;
-      if (import.meta.client) {
-        localStorage.removeItem(TOKEN_KEY);
-      }
+      safeCookie.removeItem({ keyWithVersion: AUTH_COOKIE_CONFIG });
       navigateTo('/login');
     },
   },

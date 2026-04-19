@@ -37,6 +37,9 @@ export default [
   {
     rules: {
       'vue/multi-word-component-names': 'off',
+
+      '@typescript-eslint/no-namespace': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
       // TypeScript compiler handles undefined-variable checking
       'no-undef': 'off',
     },
