@@ -159,54 +159,54 @@ Change these in `alembic/versions/0001_users_table.py` before going to productio
 
 ## SDD Workflow
 ┌─────────────────────────────────────────────────────────┐
-│                   РАЗОВАЯ ПОДГОТОВКА                    │
+│                   ONE-TIME SETUP                        │
 │                                                         │
-│  1. Architect заполняет docs/SPEC.md                    │
+│  1. Architect fills in docs/SPEC.md                     │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│              ЦИКЛ КАЖДОЙ ФАЗЫ                           │
+│                  PER-PHASE CYCLE                        │
 │                                                         │
 │  2. /phase-init N                                       │
-│     └─ создаёт PHASE_N.md со всеми секциями:            │
-│        scope из §8, таблицы из §3, эндпоинты из §4.2,   │
-│        TS-типы, Pinia stores, файлы, env vars           │
+│     └─ creates PHASE_N.md with all sections:            │
+│        scope from §8, tables from §3, endpoints §4.2,   │
+│        TS types, Pinia stores, files, env vars          │
 │                                                         │
-│  3. Architect проверяет PHASE_N.md                      │
-│     └─ заполняет только: commit message + git branch    │
+│  3. Architect reviews PHASE_N.md                        │
+│     └─ fills in only: commit message + git branch       │
 │        git checkout -b feat/phase-N                     │
 │                                                         │
-│  4. AI реализует scope                                  │
-│     └─ "Реализуй scope из docs/PHASE_N.md"              │
+│  4. AI implements the scope                             │
+│     └─ "Implement the scope from docs/PHASE_N.md"       │
 │                                                         │
 │  5. /phase-gate N                                       │
 │     └─ docker, pytest, tsc, vitest, smoke endpoint      │
-│        ❌ FAIL → фикс → снова /phase-gate               │
-│        ✅ PASS → следующий шаг                          |
+│        ❌ FAIL → fix → run /phase-gate again            │
+│        ✅ PASS → next step                              │
 │                                                         │
 │  6. git commit feat(phase-N): [description]             │
 │                                                         │
 │  7. /context-update N                                   │
-│     └─ обновляет CONTEXT.md, STATE.md, CHANGELOG.md     │
+│     └─ updates CONTEXT.md, STATE.md, CHANGELOG.md       │
 │                                                         │
 │  8. PR feat/phase-N → develop → human review → merge    │
 │                                                         │
 │  9. git tag -a v0.N.0 -m "Phase N: [title]"             │
 │                                                         │
-│  10. → /phase-init N+1 (повтор цикла)                   │
+│  10. → /phase-init N+1 (repeat the cycle)               │
 └─────────────────────────────────────────────────────────┘
                           │
-                  (все фазы закрыты)
+                  (all phases closed)
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│                    РЕЛИЗ / ПОСТПРОДАКШН                 │
+│                  RELEASE / POST-PROD                    │
 │                                                         │
 │  11. merge develop → main                               │
 │  12. git tag -a v1.0.0 -m "Release: MVP complete"       │
 │                                                         │
-│  Новые фичи → правки SPEC.md → /spec-sync → phase-init  │
-│  Баги → hotfix/* от main → merge в main + develop       │
+│  New features → edit SPEC.md → /spec-sync → phase-init  │
+│  Bugs → hotfix/* from main → merge into main + develop  │
 └─────────────────────────────────────────────────────────┘
 
 This template follows a **Spec-Driven Development** cycle where you act as architect and the AI acts as a precision implementer.
