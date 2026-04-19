@@ -2,3 +2,8 @@ node_modules/
 .nuxt/
 .output/
 dist/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/

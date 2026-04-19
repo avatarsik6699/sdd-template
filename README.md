@@ -115,6 +115,30 @@ Change these in `alembic/versions/0001_users_table.py` before going to productio
 
 ---
 
+## Testing
+
+### Backend
+Pytest runs against a local SQLite in-memory db by default, or against the Postgres DB if configured.
+```bash
+uv run pytest
+```
+
+### Frontend
+**Unit/Component Tests (Vitest):**
+```bash
+cd frontend && pnpm test
+```
+
+**End-to-End Tests (Playwright):**
+The E2E tests run against the Dockerized stack. See [frontend/README.md](frontend/README.md) for full details and guidelines on writing testable components.
+```bash
+cd frontend
+pnpm test:e2e:install  # first time only
+pnpm test:e2e          # run tests
+```
+
+---
+
 ## Project structure
 
 ```
@@ -176,24 +200,24 @@ Change these in `alembic/versions/0001_users_table.py` before going to productio
 │  3. Architect reviews PHASE_N.md                        │
 │     └─ fills in only: commit message + git branch       │
 │        git checkout -b feat/phase-N                     │
-│                                                         │
+                                                         │
 │  4. AI implements the scope                             │
 │     └─ "Implement the scope from docs/PHASE_N.md"       │
-│                                                         │
+                                                         │
 │  5. /phase-gate N                                       │
 │     └─ docker, pytest, tsc, vitest, smoke endpoint      │
 │        ❌ FAIL → fix → run /phase-gate again            │
 │        ✅ PASS → next step                              │
-│                                                         │
+                                                         │
 │  6. git commit feat(phase-N): [description]             │
-│                                                         │
+                                                         │
 │  7. /context-update N                                   │
 │     └─ updates CONTEXT.md, STATE.md, CHANGELOG.md       │
-│                                                         │
+                                                         │
 │  8. PR feat/phase-N → develop → human review → merge    │
-│                                                         │
+                                                         │
 │  9. git tag -a v0.N.0 -m "Phase N: [title]"             │
-│                                                         │
+                                                         │
 │  10. → /phase-init N+1 (repeat the cycle)               │
 └─────────────────────────────────────────────────────────┘
                           │
@@ -204,7 +228,7 @@ Change these in `alembic/versions/0001_users_table.py` before going to productio
 │                                                         │
 │  11. merge develop → main                               │
 │  12. git tag -a v1.0.0 -m "Release: MVP complete"       │
-│                                                         │
+                                                         │
 │  New features → edit SPEC.md → /spec-sync → phase-init  │
 │  Bugs → hotfix/* from main → merge into main + develop  │
 └─────────────────────────────────────────────────────────┘
