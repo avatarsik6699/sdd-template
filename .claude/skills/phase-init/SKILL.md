@@ -124,6 +124,7 @@ Copy the structure from PHASE_TEMPLATE.md and substitute all placeholders:
 | Contracts — API endpoints | Endpoint rows from Step 4c |
 | Contracts — TS types/stores | Types and stores from Step 4d |
 | Contracts — Env vars | Env var table from Step 4f |
+| Atomic Commit Message | Generated from phase number + scope (see rule below) |
 
 **Rules for filling Contracts:**
 - Extract verbatim from SPEC.md wherever possible — do not paraphrase
@@ -131,9 +132,14 @@ Copy the structure from PHASE_TEMPLATE.md and substitute all placeholders:
 - Do NOT leave entire sections blank or as generic `[TODO: ...]` — always make a best-effort extraction
 - Do NOT invent data that isn't in SPEC.md
 
-Leave as `[TODO: ...]` only:
+**Rule for Atomic Commit Message:**
+Derive the description from the phase title and 2–4 key deliverables extracted from the scope in Step 4a.
+Format: `feat(phase-[XX]): [phase title in lowercase] — [key deliverable 1], [key deliverable 2], ...`
+Keep the total line under 72 characters. Focus on WHAT was built, not HOW.
+Example: `feat(phase-02): user management — doctor/patient profiles, admin CRUD, RBAC guards`
+
+Leave as `[TODO: verify]` only:
 - Gate Checks smoke test expected response body (if not obvious)
-- Atomic Commit Message description part
 
 ## Step 6 — Add phase row to docs/STATE.md
 
@@ -162,9 +168,8 @@ Contracts filled from SPEC.md:
 - Files: [count] files listed
 
 Before handing to AI for implementation, verify:
-1. Atomic Commit Message — fill in the description
-2. Gate Checks — confirm smoke test expected response if left as [TODO]
-3. Any [TODO: verify] markers in Contracts
+1. Gate Checks — confirm smoke test expected response if left as [TODO: verify]
+2. Any [TODO: verify] markers in Contracts
 
 CONTEXT.md version at time of init: [version]
 ```
