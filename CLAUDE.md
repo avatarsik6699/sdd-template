@@ -73,6 +73,6 @@ These skills are defined here and shipped to derived projects:
 | `spec-sync` | Sync SPEC.md changes across docs — **for derived projects** |
 | `phase-gate` | Run gate checks before commit — **for derived projects** |
 | `context-update` | Update CONTEXT.md after phase — **for derived projects** |
-| `phase-init` | Scaffold a new PHASE_XX.md — **for derived projects** |
+| `phase-init` | Scaffold a new PHASE_XX.md, filling scope, Contracts, and Files from SPEC.md — **for derived projects** |
 
 When **testing** a skill, use a scratch directory, not this repo's `docs/`.
