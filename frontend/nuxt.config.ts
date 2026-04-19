@@ -5,6 +5,14 @@ export default defineNuxtConfig({
 
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
 
+  imports: {
+    autoImport: false,
+  },
+
+  components: {
+    dirs: [],
+  },
+
   runtimeConfig: {
     public: {
       apiBase: process.env.API_BASE_URL ?? 'http://localhost:8000',

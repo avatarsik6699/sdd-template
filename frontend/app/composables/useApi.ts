@@ -1,3 +1,6 @@
+import { useRuntimeConfig } from '#imports';
+import { useAuthStore } from '~/stores/auth';
+
 /**
  * useApi — thin wrapper over $fetch that automatically attaches the JWT
  * Authorization header from the auth store and redirects to /login on 401.

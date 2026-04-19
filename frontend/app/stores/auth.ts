@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { useRuntimeConfig, navigateTo } from '#imports';
 
 export interface AuthUser {
   id: string;
