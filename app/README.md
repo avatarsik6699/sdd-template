@@ -80,9 +80,9 @@ Naming: `tests/test_<resource>.py`. Fixture-style factories over module-level te
 
 ## Mandatory rules (duplicated locally — these are load-bearing)
 
-These two rules are repeated here because an AI editing inside [app/](.) often won't read the root [CLAUDE.md](../CLAUDE.md) first, and missing either one costs a lot of tokens.
+These two rules are repeated here because an AI editing inside [app/](.) often won't read the root [AGENTS.md](../AGENTS.md) or [CLAUDE.md](../CLAUDE.md) first, and missing either one costs a lot of tokens.
 
-1. **Use `ctx7` before writing code against any external library** — FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, python-jose, bcrypt, or any third-party package. Run `npx ctx7@latest library "<name>"` then `npx ctx7@latest docs /org/project "<question>"`. Do NOT rely on training data. Full rule in [../CLAUDE.md](../CLAUDE.md#library-documentation-lookup-mandatory).
+1. **Use up-to-date docs before writing code against any external library** — FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, python-jose, bcrypt, or any third-party package. Prefer a configured docs MCP such as Context7 when available, then `ctx7` CLI, then official docs. Do NOT rely on training data. Full rule in [../AGENTS.md](../AGENTS.md#documentation-lookup), [../CLAUDE.md](../CLAUDE.md#library-documentation-lookup-mandatory), and [../docs/AGENT_SETUP.md](../docs/AGENT_SETUP.md).
 
 2. **On `EACCES` / `EPERM` / "Permission denied"** — stop immediately, post the handoff message from [../CLAUDE.md](../CLAUDE.md#filesystem-permission-failures--stop-and-ask) to the user with the real path, wait for the keyword `continue` before retrying. Never `sudo`, `chmod`, or loop.
 
@@ -90,7 +90,7 @@ These two rules are repeated here because an AI editing inside [app/](.) often w
 
 ## Pointers
 
-- Project-wide rules & phase lifecycle — [../CLAUDE.md](../CLAUDE.md)
+- Project-wide rules & phase lifecycle — [../AGENTS.md](../AGENTS.md), [../CLAUDE.md](../CLAUDE.md)
 - Strategic brief — [../docs/SPEC.md](../docs/SPEC.md)
 - Current contract version — [../docs/CONTEXT.md](../docs/CONTEXT.md)
 - Frontend style guide — [../frontend/README.md](../frontend/README.md)

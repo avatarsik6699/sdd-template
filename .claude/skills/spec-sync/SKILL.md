@@ -9,6 +9,8 @@ argument-hint: "[brief description of what changed in SPEC.md]"
 > follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
 > the #1 source of rework in this workflow.**
 
+> Canonical portable playbook: `docs/workflows/spec-sync.md`
+
 You are executing the SDD Spec Change Sync Protocol.
 
 `docs/SPEC.md` has been modified. Your job is to propagate that change correctly across all documents without losing any existing data.

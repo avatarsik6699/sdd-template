@@ -9,6 +9,8 @@ argument-hint: "[phase number, e.g. 01]"
 > follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
 > the #1 source of rework in this workflow.**
 
+> Canonical portable playbook: `docs/workflows/phase-gate.md`
+
 You are running the SDD phase gate checks. Your job is to run all required checks and produce an honest PASS / FAIL report. Do NOT modify any code files — this skill is read-only.
 
 **Target phase**: $ARGUMENTS

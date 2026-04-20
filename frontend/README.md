@@ -179,9 +179,9 @@ The `/phase-gate` skill requires a ✅ e2e row before commit — unit tests alon
 
 ## Mandatory rules (duplicated locally — these are load-bearing)
 
-Repeated here because an AI editing inside [app/](app/) (frontend Nuxt app) often won't open the root [../CLAUDE.md](../CLAUDE.md), and missing either of these burns tokens.
+Repeated here because an AI editing inside [app/](app/) (frontend Nuxt app) often won't open the root [../AGENTS.md](../AGENTS.md) or [../CLAUDE.md](../CLAUDE.md), and missing either of these burns tokens.
 
-1. **Use `ctx7` before writing code against any external library** — Nuxt, Vue, Pinia, Tailwind, Nuxt UI, Vitest, Playwright, @nuxtjs/i18n, or any third-party package. Run `npx ctx7@latest library "<name>"` then `npx ctx7@latest docs /org/project "<question>"`. Full rule in [../CLAUDE.md](../CLAUDE.md#library-documentation-lookup-mandatory).
+1. **Use up-to-date docs before writing code against any external library** — Nuxt, Vue, Pinia, Tailwind, Nuxt UI, Vitest, Playwright, @nuxtjs/i18n, or any third-party package. Prefer a configured docs MCP such as Context7 when available, then `ctx7` CLI, then official docs. Full rule in [../AGENTS.md](../AGENTS.md#documentation-lookup), [../CLAUDE.md](../CLAUDE.md#library-documentation-lookup-mandatory), and [../docs/AGENT_SETUP.md](../docs/AGENT_SETUP.md).
 
 2. **On `EACCES` / `EPERM` / "Permission denied"** (most often on `.nuxt/`, `.output/`, or `node_modules/.cache/` after a Docker run) — stop immediately, post the handoff message from [../CLAUDE.md](../CLAUDE.md#filesystem-permission-failures--stop-and-ask) to the user with the real path, wait for the keyword `continue` before retrying. Never `sudo`, `chmod`, or loop.
 

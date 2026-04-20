@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "context7-mcp",
+      "note": "Project-local Context7 MCP declaration. If context7-mcp is not on PATH in your Codex runtime, keep the global Codex MCP entry or replace this command with an absolute binary path."
+    }
+  }
+}

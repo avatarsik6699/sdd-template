@@ -27,7 +27,14 @@ When the user asks a question that depends on stack specifics (how to run tests,
 
 ## Library documentation lookup (mandatory)
 
-Before writing or reviewing code that uses any external library, framework, SDK, CLI tool, or cloud service (FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, Typer, Nuxt, Vue, Pinia, Vite, Tailwind, Nuxt UI, Vitest, Playwright, or any third-party package), consult up-to-date documentation via `ctx7`:
+Before writing or reviewing code that uses any external library, framework, SDK, CLI tool, or cloud service (FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, Typer, Nuxt, Vue, Pinia, Vite, Tailwind, Nuxt UI, Vitest, Playwright, or any third-party package), consult up-to-date documentation using this preference order:
+
+1. Context7 via MCP, if the current runtime exposes it
+2. For OpenAI products specifically, the official OpenAI developer documentation MCP server, if the current runtime exposes it
+3. `ctx7` CLI
+4. Official library docs only if the preferred MCP/docs integration is unavailable
+
+CLI usage:
 
 ```bash
 npx ctx7@latest library "<library name>"           # resolve to /org/project
@@ -42,7 +49,20 @@ Rules:
 - For version-specific docs use `/org/project/version` from the `library` output.
 - Never include secrets (API keys, passwords) in queries.
 
-Stale library knowledge is the #1 source of rework in this workflow. Treat `ctx7` as a required step, not an optional one.
+Stale library knowledge is the #1 source of rework in this workflow. Treat Context7 as a required step, not an optional one, whether accessed through MCP or CLI.
+
+## Repo Memory Files
+
+Keep lightweight long-lived project memory in repository docs so future sessions do not have to reconstruct important context from chat history alone.
+
+Recommended files:
+- `docs/ARCHITECTURE.md`
+- `docs/DECISIONS.md`
+- `docs/TESTING.md`
+- `docs/RUNBOOK.md`
+- `docs/KNOWN_GOTCHAS.md`
+
+When these files exist, consult and update them as part of normal development work.
 
 ---
 

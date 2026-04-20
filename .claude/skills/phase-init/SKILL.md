@@ -9,6 +9,8 @@ argument-hint: "[phase number, e.g. 02]"
 > follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
 > the #1 source of rework in this workflow.**
 
+> Canonical portable playbook: `docs/workflows/phase-init.md`
+
 You are initializing a new phase document for the SDD workflow.
 
 **Target phase**: $ARGUMENTS

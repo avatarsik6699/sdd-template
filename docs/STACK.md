@@ -146,7 +146,7 @@ Full testing guidelines, including `data-testid` conventions and per-flow spec r
 ├── nginx.conf
 ├── pyproject.toml
 ├── .env.example
-└── CLAUDE.md               # AI agent rules (scope lock, gates, ctx7, permission handoff)
+└── AGENTS.md / CLAUDE.md   # AI agent rules (scope lock, gates, docs lookup, permission handoff)
 ```
 
 ---
@@ -158,7 +158,7 @@ Before editing code under `app/` or `frontend/`, read the local style guide:
 - Backend: [../app/README.md](../app/README.md) — ruff/mypy config, naming, key patterns (async session, role guards, Pydantic Settings)
 - Frontend: [../frontend/README.md](../frontend/README.md) — FSD layers, auto-imports, Pinia conventions, E2E expectations
 
-Both local guides repeat two load-bearing rules (`ctx7` lookups and permission-denied handoff) because an AI editing inside those subtrees often won't open the root [CLAUDE.md](../CLAUDE.md).
+Both local guides repeat two load-bearing rules (docs lookup and permission-denied handoff) because an AI editing inside those subtrees often won't open the root [AGENTS.md](../AGENTS.md) or [CLAUDE.md](../CLAUDE.md).
 
 ---
 

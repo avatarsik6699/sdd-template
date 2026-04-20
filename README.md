@@ -11,7 +11,8 @@ The SDD pipeline is a **stack-agnostic process** for delivering software in atom
 
 - **Documents** encode intent (`SPEC`), a living contract (`CONTEXT`), progress (`STATE`), a change history (`CHANGELOG`), and scoped tasks (`PHASE_XX`).
 - **Skills** (slash commands) automate phase scaffolding, gate checks, and doc synchronisation.
-- **Rules** in [CLAUDE.md](CLAUDE.md) keep AI agents inside the phase scope and force a passing gate before commit.
+- **Rules** in [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) keep AI agents inside the phase scope and force a passing gate before commit.
+- **Repo memory files** keep architecture, testing, and operational context stable across agent sessions.
 
 The reference implementation ships with a concrete stack (FastAPI + Nuxt 4 + PostgreSQL + Docker).
 Everything stack-specific — setup commands, directory layout, testing tools, migrations — lives in
@@ -26,7 +27,7 @@ Everything stack-specific — setup commands, directory layout, testing tools, m
    ./scripts/init-project.sh <project-slug> <domain> [admin-email]
    # Example: ./scripts/init-project.sh user-dashboard example.com admin@example.com
    ```
-   The script replaces placeholders, generates `.env`, creates random secrets, and copies `CLAUDE.md` into place.
+   The script replaces placeholders, generates `.env`, creates random secrets, and copies both `AGENTS.md` and `CLAUDE.md` into place.
    Prerequisites and post-init steps → **[docs/STACK.md](docs/STACK.md#prerequisites)**.
 
 2. **Fill in [docs/SPEC.md](docs/SPEC.md)** — strategic brief, goals, domain rules.
@@ -72,6 +73,8 @@ Affected phases are marked `⚠️ NEEDS_REVIEW` in `docs/STATE.md` until resolv
 | `/context-update [N]` | After the gate passes — bumps `CONTEXT.md` version, updates `STATE.md` and `CHANGELOG.md` |
 
 Skill definitions live under [.claude/skills/](.claude/skills/).
+They are Claude Code native, but the underlying workflows can also be followed manually or mapped into other agent runtimes.
+Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.md).
 
 ---
 
@@ -85,6 +88,14 @@ Skill definitions live under [.claude/skills/](.claude/skills/).
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | Why did the contract change? Which phases were affected? |
 | [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) | What exactly should the AI implement this iteration? |
 | [docs/STACK.md](docs/STACK.md) | Stack-specific setup, testing, layout, and conventions |
+| [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md) | Context7, MCP, and cross-agent setup guidance |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | High-signal map of the system shape and boundaries |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Short ADR-style technical decisions worth remembering |
+| [docs/TESTING.md](docs/TESTING.md) | The real test strategy and required validation commands |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operational commands, deploy notes, and recovery steps |
+| [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md) | Repeated pitfalls, symptoms, and shortest safe fixes |
+| [docs/workflows/README.md](docs/workflows/README.md) | Portable workflow playbooks for phase-init, gate, sync, and context update |
+| [AGENTS.md](AGENTS.md) | Model-agnostic AI rules and workflow mapping |
 | [CLAUDE.md](CLAUDE.md) | AI rules — scope lock, gate-before-commit, `ctx7`, permission handoff |
 
 ---

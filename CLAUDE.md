@@ -13,7 +13,9 @@
 
 | Path | What it is |
 |------|-----------|
+| `AGENTS.md` | Model-agnostic rules for working on the template |
 | `CLAUDE.md` | Meta-rules for working on the template (this file) |
+| `human-instructions/AGENTS.for-new-projects.md` | The AGENTS.md that gets copied into every derived project |
 | `human-instructions/CLAUDE.for-new-projects.md` | The CLAUDE.md that gets copied into every derived project |
 | `docs/SPEC.md` | Example / blank SPEC for derived projects — a template file |
 | `docs/CONTEXT.md` | Example CONTEXT for derived projects — a template file |
@@ -21,8 +23,13 @@
 | `docs/PHASE_TEMPLATE.md` | Scaffold for generating PHASE_XX.md in derived projects |
 | `docs/PHASE_01.md` | Reference example phase — a template file |
 | `docs/STACK.md` | Stack-specific companion to `README.md` (setup, testing, layout for the FastAPI + Nuxt reference stack). Replace when swapping stacks. |
+| `docs/ARCHITECTURE.md` | Optional repo-memory file for system shape, boundaries, and responsibilities |
+| `docs/DECISIONS.md` | Optional repo-memory file for ADR-style technical decisions |
+| `docs/TESTING.md` | Optional repo-memory file for the real validation strategy |
+| `docs/RUNBOOK.md` | Optional repo-memory file for operational commands and recovery steps |
+| `docs/KNOWN_GOTCHAS.md` | Optional repo-memory file for recurring pitfalls and local traps |
 | `app/`, `frontend/`, `tests/` | Reference implementation code shipped with the template |
-| `.claude/` | Skill definitions (`skills/`) used by derived projects |
+| `.claude/` | Claude Code specific skill definitions (`skills/`) used by derived projects |
 
 ---
 

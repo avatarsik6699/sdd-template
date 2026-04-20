@@ -170,6 +170,12 @@ sedi "s|myapp|$DB_NAME|g" docs/PHASE_01.md
 sedi "s|myapp|$DB_NAME|g" docs/PHASE_TEMPLATE.md
 echo "  ✓ docs/"
 
+# ── AGENTS.md ─────────────────────────────────────────────────────────────────
+
+tail -n +7 human-instructions/AGENTS.for-new-projects.md > AGENTS.md
+sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" AGENTS.md
+echo "  ✓ AGENTS.md"
+
 # ── CLAUDE.md ─────────────────────────────────────────────────────────────────
 # Strip the 6-line template header from human-instructions/CLAUDE.for-new-projects.md,
 # then replace [PROJECT_NAME] in the result.
