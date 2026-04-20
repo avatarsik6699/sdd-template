@@ -1,0 +1,7 @@
+# CI-only override: runs the production frontend image (no dev server,
+# no bind mounts, no UID constraints) and publishes the frontend port
+# so Playwright can reach it on localhost:3000.
+services:
+  frontend:
+    ports:
+      - "3000:3000"
