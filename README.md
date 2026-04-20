@@ -1,7 +1,7 @@
 # SDD Template — Spec-Driven Development Pipeline
 
-> A reusable pipeline for AI-assisted, phased delivery. The **architect** defines contracts;
-> the **AI** implements within scope; **gates** enforce quality before every commit.
+> A reusable pipeline for AI-assisted, phased delivery. The **architect** defines the product intent;
+> `phase-init` scaffolds the phase contract and file plan; the **AI** implements within scope; **gates** enforce quality before every commit.
 
 ---
 
@@ -44,8 +44,8 @@ Nuxt `prepare` pre-step required before frontend type/tests — lives in
 ```mermaid
 flowchart TD
     Spec[docs/SPEC.md filled in by architect]
-    Spec --> Init["/phase-init N<br/>scaffolds PHASE_N.md from SPEC"]
-    Init --> Fill[Architect fills Contracts + Files<br/>creates feat/phase-N branch]
+    Spec --> Init["/phase-init N<br/>scaffolds PHASE_N.md, contracts, and file plan from SPEC"]
+    Init --> Fill[Architect reviews scaffold<br/>creates feat/phase-N branch]
     Fill --> Impl[AI implements scope on feat/phase-N]
     Impl --> Gate{"/phase-gate N"}
     Gate -- FAIL --> Impl
@@ -103,7 +103,7 @@ Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.m
 
 ## Philosophy
 
-- **Architect defines contracts, AI fills them in.** The architect writes SPEC, reviews phase contracts, and approves merges. The AI generates code, tests, and doc updates strictly inside the phase scope.
+- **Architect defines intent, phase-init scaffolds contracts, AI fills them in.** The architect writes SPEC, reviews the phase scaffold, and approves merges. `phase-init` generates the phase contract and file plan, and the AI produces code, tests, and doc updates strictly inside that scope.
 - **Contracts beat conventions.** Every phase has an explicit contract (scope, files, endpoints, types, env vars). Nothing implicit.
 - **Gates, not promises.** Quality is proven by a passing `/phase-gate` report (unit + type + e2e + smoke), not by the AI claiming "looks good".
 - **Docs are alive.** `CONTEXT.md` is the single source of truth for what exists; `STATE.md` tracks progress; `CHANGELOG.md` records why things changed. `CONTEXT.md` must never lag more than one phase behind.
