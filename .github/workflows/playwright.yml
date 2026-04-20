@@ -21,8 +21,12 @@ jobs:
     - name: Wait for frontend to be healthy
       run: |
         echo "Waiting for frontend to be healthy..."
-        timeout 60s bash -c 'until curl -s http://localhost:3000 > /dev/null; do sleep 2; done'
+        timeout 300s bash -c 'until curl -sf http://localhost:3000 > /dev/null; do sleep 5; done'
         echo "Frontend is up!"
+
+    - name: Dump Docker logs on failure
+      if: failure()
+      run: docker compose logs --tail=200
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
