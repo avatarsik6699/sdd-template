@@ -15,7 +15,8 @@ The SDD pipeline is a **stack-agnostic process** for delivering software in atom
 - **Repo memory files** keep architecture, testing, and operational context stable across agent sessions.
 
 The reference implementation ships with a concrete stack (FastAPI + Nuxt 4 + PostgreSQL + Docker).
-Everything stack-specific — setup commands, directory layout, testing tools, migrations — lives in
+Everything stack-specific — setup commands, directory layout, testing tools, migrations, and the
+Nuxt `prepare` pre-step required before frontend type/tests — lives in
 **[docs/STACK.md](docs/STACK.md)**. Swap that file when swapping stacks; the pipeline does not change.
 
 ---

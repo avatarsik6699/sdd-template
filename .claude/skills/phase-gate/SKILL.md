@@ -1,6 +1,6 @@
 ---
 name: phase-gate
-description: Run all gate checks for the current phase before committing. Checks docker infrastructure, pytest, tsc, vitest, Playwright e2e, and a smoke endpoint. Reports PASS or FAIL.
+description: Run all gate checks for the current phase before committing. Checks docker infrastructure, pytest, Nuxt prepare, frontend type-checks, vitest, Playwright e2e, and a smoke endpoint. Reports PASS or FAIL.
 allowed-tools: Bash, Read
 argument-hint: "[phase number, e.g. 01]"
 ---
@@ -49,23 +49,31 @@ uv run pytest tests/ -v 2>&1
 Capture full output. Count passed / failed / error.
 If ANY test fails or errors: record ❌, note the failing test names. Do NOT stop — continue to next checks so the full picture is visible.
 
-## Step 5 — Run TypeScript check
+## Step 5 — Generate Nuxt types
 
 ```bash
-cd frontend && pnpm exec tsc --noEmit 2>&1
+cd frontend && pnpm nuxt prepare 2>&1
+```
+
+If this fails: record ❌ and continue. Frontend type-check and Vitest depend on `.nuxt/`.
+
+## Step 6 — Run TypeScript check
+
+```bash
+cd frontend && pnpm typecheck 2>&1
 ```
 
 Count errors. If any errors: record ❌ with error count.
 
-## Step 6 — Run frontend tests
+## Step 7 — Run frontend tests
 
 ```bash
-cd frontend && pnpm vitest run 2>&1
+cd frontend && pnpm test 2>&1
 ```
 
 Count passed / failed. If any fail: record ❌.
 
-## Step 6.5 — Run Playwright end-to-end tests
+## Step 8 — Run Playwright end-to-end tests
 
 **Precondition**: the full Docker stack must already be running. Do NOT auto-start it — Playwright specs fail in confusing ways if the stack is coming up while they execute, and silent auto-starts hide state drift from the user.
 
@@ -91,7 +99,7 @@ After the run, parse `frontend/test-results/junit.xml` for pass/fail/skip counts
 
 If the stack is up but `frontend/test-results/junit.xml` is missing after the run, record ❌ with the note "Playwright did not emit junit.xml — check reporter config" and move on.
 
-## Step 7 — Run smoke test
+## Step 9 — Run smoke test
 
 Run the `curl` command from the phase file's Gate Checks section. If no smoke test is listed, use:
 ```bash
@@ -99,7 +107,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/health
 ```
 Expected: HTTP 200. If backend is not running, report ❌ with note "backend not running".
 
-## Step 8 — Produce gate report
+## Step 10 — Produce gate report
 
 Output in this exact format:
 
@@ -111,7 +119,8 @@ Output in this exact format:
 | Docker db      | ✅/❌  |                            |
 | Docker redis   | ✅/❌  |                            |
 | pytest         | ✅/❌  | N passed, M failed         |
-| tsc --noEmit   | ✅/❌  | N errors                   |
+| nuxt prepare   | ✅/❌  | generated `.nuxt` / error  |
+| typecheck      | ✅/❌  | N errors                   |
 | vitest         | ✅/❌  | N passed, M failed         |
 | e2e (playwright)| ✅/❌  | N passed, M failed — report: frontend/playwright-report/index.html |
 | Smoke test     | ✅/❌  | HTTP NNN                   |

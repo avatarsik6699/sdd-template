@@ -101,7 +101,9 @@ pnpm build
 Before committing:
 
 ```bash
-pnpm lint:fix && pnpm exec tsc --noEmit
+pnpm lint:fix
+pnpm nuxt prepare
+pnpm typecheck
 ```
 
 ### TypeScript / Vue patterns
@@ -133,6 +135,7 @@ Nuxt's own `defineNuxtConfig`, `ref`, `computed`, `useRoute`, etc. are also auto
 ### Unit tests (Vitest)
 
 ```bash
+pnpm nuxt prepare
 pnpm test
 ```
 

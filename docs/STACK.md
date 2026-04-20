@@ -43,10 +43,8 @@ pnpm --version          # 10+
 After cloning and running `./scripts/init-project.sh`:
 
 ```bash
-# 1. Environment
-cp .env.example .env
-echo "import secrets; print(secrets.token_hex(32))" | uv run -
-# paste into SECRET_KEY= in .env
+# 1. Review the generated environment
+$EDITOR .env
 
 # 2. Start the stack
 docker compose up --build
@@ -54,6 +52,7 @@ docker compose up --build
 # Frontend: http://localhost:3000
 ```
 
+`init-project.sh` already creates `.env`, injects fresh secrets, and rewrites template placeholders.
 Migrations run automatically on backend startup. Hot-reload is active for both services —
 changes in `app/` and `frontend/` are reflected immediately without restarting containers.
 
@@ -99,6 +98,20 @@ uv run pytest
 ### Frontend unit / component (Vitest)
 ```bash
 cd frontend && pnpm test
+```
+
+Nuxt-generated types are required for both type-checking and Vitest. If `.nuxt/` is missing
+(common in CI or a fresh checkout), run:
+
+```bash
+cd frontend && pnpm nuxt prepare
+```
+
+### Frontend type-checking
+```bash
+cd frontend
+pnpm nuxt prepare
+pnpm typecheck
 ```
 
 ### Frontend end-to-end (Playwright)

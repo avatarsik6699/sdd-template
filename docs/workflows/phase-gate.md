@@ -18,11 +18,12 @@ Procedure:
 3. Verify infrastructure with `docker compose ps`.
 4. Ensure `db` and `redis` are up and healthy. If needed, run `docker compose up -d db redis`.
 5. Run backend tests.
-6. Run TypeScript checks.
-7. Run frontend unit tests.
-8. Run Playwright e2e only if the full app stack is already up.
-9. Run the smoke test from the phase file, or the default health check if none is specified.
-10. Produce a table report with one row per check and an overall PASS or FAIL.
+6. Run `pnpm nuxt prepare` so `.nuxt/` types exist for frontend checks.
+7. Run frontend type checks.
+8. Run frontend unit tests.
+9. Run Playwright e2e only if the full app stack is already up.
+10. Run the smoke test from the phase file, or the default health check if none is specified.
+11. Produce a table report with one row per check and an overall PASS or FAIL.
 
 Rules:
 

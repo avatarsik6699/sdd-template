@@ -160,8 +160,9 @@ curl -s http://localhost:8000/api/v1/health
 # 5. Frontend
 cd frontend
 pnpm install --frozen-lockfile
-pnpm exec tsc --noEmit
-pnpm vitest run
+pnpm nuxt prepare
+pnpm typecheck
+pnpm test
 ```
 
 ---

@@ -71,8 +71,8 @@ cd "$ROOT_DIR"
 
 # ── idempotency guard ─────────────────────────────────────────────────────────
 
-if ! grep -q '\[PROJECT_NAME\]' README.md 2>/dev/null; then
-  echo "Warning: [PROJECT_NAME] not found in README.md."
+if ! grep -q '\[PROJECT_NAME\]' docs/SPEC.md 2>/dev/null; then
+  echo "Warning: [PROJECT_NAME] not found in docs/SPEC.md."
   echo "This script may have already been run. Re-running will overwrite .env."
   echo ""
   read -r -p "Continue anyway? [y/N] " confirm

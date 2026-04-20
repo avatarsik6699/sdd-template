@@ -26,7 +26,7 @@ metadata:
       - [gate, checks]
     anyOf:
       - "pytest"
-      - "tsc"
+      - "typecheck"
       - "playwright"
     noneOf: []
     minScore: 6
@@ -56,11 +56,12 @@ Workflow:
 2. Read the phase file's Gate Checks section.
 3. Check Docker infrastructure state.
 4. Run backend tests.
-5. Run TypeScript checks.
-6. Run frontend unit tests.
-7. Run Playwright end-to-end tests only if the full stack is already up.
-8. Run the smoke check.
-9. Produce a structured gate report with PASS/FAIL and exact failing areas.
+5. Run `pnpm nuxt prepare` so `.nuxt/` types exist.
+6. Run frontend type checks.
+7. Run frontend unit tests.
+8. Run Playwright end-to-end tests only if the full stack is already up.
+9. Run the smoke check.
+10. Produce a structured gate report with PASS/FAIL and exact failing areas.
 
 Rules:
 

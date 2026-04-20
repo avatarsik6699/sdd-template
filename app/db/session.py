@@ -1,17 +1,23 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.APP_ENV == "development",
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    max_overflow=10,
-)
+engine_kwargs: Any = {
+    "echo": settings.APP_ENV == "development",
+    "pool_pre_ping": True,
+}
+
+# SQLite's async engine setup differs from Postgres and rejects queue-pool
+# options like max_overflow that are valid for asyncpg-backed deployments.
+if not settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["pool_recycle"] = 3600
+    engine_kwargs["max_overflow"] = 10
+
+engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

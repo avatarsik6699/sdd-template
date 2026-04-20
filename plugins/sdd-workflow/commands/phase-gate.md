@@ -15,7 +15,7 @@ Run the repository's gate checks and return an honest PASS/FAIL report.
 ## Plan
 
 1. Check container health.
-2. Run backend and frontend validation commands.
+2. Run backend validation, then `pnpm nuxt prepare`, frontend type-check, and frontend unit tests.
 3. Run Playwright only if the full stack is already healthy.
 4. Run the smoke test.
 5. Summarize everything in one gate report.
@@ -40,7 +40,8 @@ Return:
 
 - Docker status
 - pytest status
-- `tsc --noEmit` status
+- `nuxt prepare` status
+- frontend type-check status
 - vitest status
 - Playwright status
 - smoke test status
