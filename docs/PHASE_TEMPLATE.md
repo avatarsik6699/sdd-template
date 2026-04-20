@@ -34,6 +34,8 @@
 - [ ] `uv run pytest tests/ -v` — all pass
 - [ ] `cd frontend && pnpm vitest run` — all pass
 - [ ] `cd frontend && pnpm exec tsc --noEmit` — 0 errors
+- [ ] `cd frontend && pnpm test:e2e` — all pass (requires full Docker stack up)
+- [ ] At least one Playwright spec covers each user-facing flow introduced in this phase
 
 ---
 
@@ -101,10 +103,17 @@ uv run pytest tests/ -v
 curl -s http://localhost:8000/api/v1/[your-endpoint]
 # expected: [describe expected response]
 
-# 5. Frontend
+# 5. Frontend unit + type check
 cd frontend
 pnpm exec tsc --noEmit
 pnpm vitest run
+
+# 6. E2E (Playwright) — requires full stack healthy:
+#    db, redis, backend, frontend, nginx
+docker compose up -d            # if not already running
+docker compose ps               # verify all five services are healthy
+pnpm test:e2e                   # parses test-results/junit.xml
+# Report lives at frontend/playwright-report/index.html
 ```
 
 ---

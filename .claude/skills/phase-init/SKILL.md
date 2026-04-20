@@ -5,6 +5,10 @@ allowed-tools: Read, Write, Glob
 argument-hint: "[phase number, e.g. 02]"
 ---
 
+> **Before generating code for any library (FastAPI, Nuxt, SQLAlchemy, Pydantic, etc.),
+> follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
+> the #1 source of rework in this workflow.**
+
 You are initializing a new phase document for the SDD workflow.
 
 **Target phase**: $ARGUMENTS

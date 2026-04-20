@@ -5,6 +5,10 @@ allowed-tools: Read, Write, Edit, Glob, Bash
 argument-hint: "[brief description of what changed in SPEC.md]"
 ---
 
+> **Before generating code for any library (FastAPI, Nuxt, SQLAlchemy, Pydantic, etc.),
+> follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
+> the #1 source of rework in this workflow.**
+
 You are executing the SDD Spec Change Sync Protocol.
 
 `docs/SPEC.md` has been modified. Your job is to propagate that change correctly across all documents without losing any existing data.

@@ -1,9 +1,13 @@
 ---
 name: phase-gate
-description: Run all gate checks for the current phase before committing. Checks docker infrastructure, pytest, tsc, vitest, and a smoke endpoint. Reports PASS or FAIL.
+description: Run all gate checks for the current phase before committing. Checks docker infrastructure, pytest, tsc, vitest, Playwright e2e, and a smoke endpoint. Reports PASS or FAIL.
 allowed-tools: Bash, Read
 argument-hint: "[phase number, e.g. 01]"
 ---
+
+> **Before generating code for any library (FastAPI, Nuxt, SQLAlchemy, Pydantic, etc.),
+> follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
+> the #1 source of rework in this workflow.**
 
 You are running the SDD phase gate checks. Your job is to run all required checks and produce an honest PASS / FAIL report. Do NOT modify any code files — this skill is read-only.
 
@@ -59,6 +63,32 @@ cd frontend && pnpm vitest run 2>&1
 
 Count passed / failed. If any fail: record ❌.
 
+## Step 6.5 — Run Playwright end-to-end tests
+
+**Precondition**: the full Docker stack must already be running. Do NOT auto-start it — Playwright specs fail in confusing ways if the stack is coming up while they execute, and silent auto-starts hide state drift from the user.
+
+Check the stack:
+
+```bash
+docker compose ps
+```
+
+Required healthy services: `db`, `redis`, `backend`, `frontend`, `nginx`. If ANY is missing or unhealthy, record ❌ for the e2e row with the exact note:
+
+> stack not up — run `docker compose up -d` and re-run `/phase-gate`
+
+…and skip the rest of this step (do not run Playwright).
+
+If the stack is up, run:
+
+```bash
+cd frontend && pnpm test:e2e 2>&1
+```
+
+After the run, parse `frontend/test-results/junit.xml` for pass/fail/skip counts (the junit reporter is configured in `frontend/playwright.config.ts`). On any failure, note which spec files failed and include the path to the HTML report (`frontend/playwright-report/index.html`) so the user can open it.
+
+If the stack is up but `frontend/test-results/junit.xml` is missing after the run, record ❌ with the note "Playwright did not emit junit.xml — check reporter config" and move on.
+
 ## Step 7 — Run smoke test
 
 Run the `curl` command from the phase file's Gate Checks section. If no smoke test is listed, use:
@@ -81,6 +111,7 @@ Output in this exact format:
 | pytest         | ✅/❌  | N passed, M failed         |
 | tsc --noEmit   | ✅/❌  | N errors                   |
 | vitest         | ✅/❌  | N passed, M failed         |
+| e2e (playwright)| ✅/❌  | N passed, M failed — report: frontend/playwright-report/index.html |
 | Smoke test     | ✅/❌  | HTTP NNN                   |
 
 **Overall: ✅ PASS / ❌ FAIL**

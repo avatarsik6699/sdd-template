@@ -20,8 +20,9 @@
 | `docs/STATE.md` | Example STATE tracker — a template file |
 | `docs/PHASE_TEMPLATE.md` | Scaffold for generating PHASE_XX.md in derived projects |
 | `docs/PHASE_01.md` | Reference example phase — a template file |
+| `docs/STACK.md` | Stack-specific companion to `README.md` (setup, testing, layout for the FastAPI + Nuxt reference stack). Replace when swapping stacks. |
 | `app/`, `frontend/`, `tests/` | Reference implementation code shipped with the template |
-| `.claude/` | Skill definitions (`commands/`) used by derived projects |
+| `.claude/` | Skill definitions (`skills/`) used by derived projects |
 
 ---
 
@@ -39,7 +40,7 @@
 
 4. **Consistency across template files** — when you rename a skill, update all references:
    `CLAUDE.md` (this file), `human-instructions/CLAUDE.for-new-projects.md`, skill files
-   under `.claude/commands/`, and `README.md`.
+   under `.claude/skills/`, and `README.md`.
 
 5. **No secrets, no hardcodes** — same rule as in any project.
 
@@ -59,7 +60,7 @@
 A change to the template is done when:
 - [ ] Template files are internally consistent (no broken references, no stale placeholders)
 - [ ] `human-instructions/CLAUDE.for-new-projects.md` matches the intended derived-project rules
-- [ ] Skills under `.claude/commands/` work correctly when invoked
+- [ ] Skills under `.claude/skills/` work correctly when invoked
 - [ ] `README.md` reflects any structural changes
 
 ---

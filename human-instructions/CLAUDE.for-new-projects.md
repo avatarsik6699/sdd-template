@@ -13,6 +13,63 @@
 5. **Security**: No hardcodes, no secrets in the code. Use `.env`, `os.getenv()`, `Pydantic Settings`.
 6. **Output**: First, the plan → waiting `✅` → code → tests → commit. Don't skip the steps.
 7. **Context**: After completing each phase, run `/context-update N` to update `docs/CONTEXT.md`, `docs/STATE.md`, and `docs/CHANGELOG.md`.
+8. **E2E First**: For every user-facing feature touched in a phase, add or update a Playwright spec under `frontend/tests/e2e/`. The `/phase-gate` e2e row must be ✅ before commit. Unit tests alone do not clear the gate.
+
+---
+
+## Stack conventions
+
+Before writing code, running commands, or reasoning about project layout, read **[docs/STACK.md](docs/STACK.md)**. It is the single source of truth for this project's concrete technologies, directory structure, setup commands, test tooling, and per-module style guides. The rules in this file (`CLAUDE.md`) are stack-agnostic — anything tied to FastAPI, Nuxt, Docker, pnpm, uv, Alembic, etc. is documented in `docs/STACK.md` and in the per-module guides it links to ([app/README.md](app/README.md), [frontend/README.md](frontend/README.md)).
+
+When the user asks a question that depends on stack specifics (how to run tests, where a file lives, which migration tool is used), consult `docs/STACK.md` first and link back to the section you used.
+
+---
+
+## Library documentation lookup (mandatory)
+
+Before writing or reviewing code that uses any external library, framework, SDK, CLI tool, or cloud service (FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, Typer, Nuxt, Vue, Pinia, Vite, Tailwind, Nuxt UI, Vitest, Playwright, or any third-party package), consult up-to-date documentation via `ctx7`:
+
+```bash
+npx ctx7@latest library "<library name>"           # resolve to /org/project
+npx ctx7@latest docs /org/project "<question>"     # fetch docs scoped to the question
+```
+
+Rules:
+- Use the official library name with correct punctuation (`Next.js`, not `nextjs`).
+- Do NOT rely on training-data knowledge alone — library APIs drift between minor versions and your training data may be stale.
+- Skip only for: pure refactoring, business-logic debugging, code review of code already written, or general programming concepts unrelated to a specific library.
+- Cap at 3 `ctx7` calls per question. If answers still aren't clear, ask the user rather than guessing.
+- For version-specific docs use `/org/project/version` from the `library` output.
+- Never include secrets (API keys, passwords) in queries.
+
+Stale library knowledge is the #1 source of rework in this workflow. Treat `ctx7` as a required step, not an optional one.
+
+---
+
+## Filesystem permission failures — stop and ask
+
+If any file operation fails with `EACCES`, `EPERM`, "Permission denied", "Read-only file system", or an equivalent host-filesystem error (most commonly when Docker-generated artefacts like `frontend/.nuxt/`, `frontend/.output/`, `node_modules/.cache/`, or `__pycache__/` end up owned by root on the host): **stop immediately**.
+
+Do NOT:
+- Retry the same operation in a loop hoping it resolves itself
+- Run `sudo`, `chmod -R 777`, or any privilege-escalation workaround
+- Delete-and-recreate the file under a different path to dodge the error
+- Silently skip the failing step and pretend the task succeeded
+
+Do: post this message to the user verbatim, substituting the real `<path>` and `<cmd>`:
+
+> ⛔ **Permission denied.** I cannot modify `<path>` while running `<cmd>`.
+>
+> This usually happens when a Docker container wrote files to a bind-mounted host directory as root. Please run one of the following on the host:
+>
+> ```bash
+> sudo chown -R $USER:$USER <path>        # reclaim ownership (keep the files)
+> sudo rm -rf <path>                       # discard the generated artefact (e.g. .nuxt / .output / node_modules/.cache)
+> ```
+>
+> When the fix is applied, reply with the single word **`continue`** and I will retry the failed operation from the same step.
+
+After sending this message, wait. On receiving the keyword `continue` (case-insensitive, possibly with punctuation), retry the exact operation that failed. If it fails a second time with the same error, stop again and ask the user to confirm the fix was actually applied — do not loop a third time.
 
 ---
 

@@ -5,6 +5,10 @@ allowed-tools: Read, Write, Edit, Glob
 argument-hint: "[phase number, e.g. 01]"
 ---
 
+> **Before generating code for any library (FastAPI, Nuxt, SQLAlchemy, Pydantic, etc.),
+> follow the `ctx7` documentation-lookup rule in `CLAUDE.md`. Stale API knowledge is
+> the #1 source of rework in this workflow.**
+
 You are executing the SDD Context Update Protocol after a phase has been completed. Your job is to synchronize `docs/CONTEXT.md`, `docs/STATE.md`, and `docs/CHANGELOG.md` with the reality of what was built.
 
 **Target phase**: $ARGUMENTS
