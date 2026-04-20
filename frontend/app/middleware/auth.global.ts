@@ -1,5 +1,5 @@
 import { defineNuxtRouteMiddleware, navigateTo } from '#imports';
-import { useAuthStore } from '~/stores/auth';
+import { useAuthStore } from '@features/auth/model/auth-store';
 
 export default defineNuxtRouteMiddleware((to) => {
   // Skip auth check on login page.

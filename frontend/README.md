@@ -1,101 +1,142 @@
-# Frontend Testing Guidelines
+# Frontend
 
-This project uses **Playwright** for end-to-end (E2E) testing and **Vitest** for unit/component testing. This document provides guidelines to ensure our frontend components remain highly testable, stable, and maintainable.
-
-## E2E Testing with Playwright
-
-Playwright is configured to run tests against our Dockerized application.
-
-### Running Tests
-
-Ensure your Docker environment is up and running before running the E2E tests:
-
-```bash
-# In the root directory:
-docker-compose up -d
-```
-
-Then run the tests from the `frontend/` directory:
-
-```bash
-# Install playwright browsers (first time only)
-pnpm test:e2e:install
-
-# Run tests headlessly
-pnpm test:e2e
-
-# Run tests with the UI runner (great for debugging)
-pnpm test:e2e:ui
-```
-
-> **Note:** By default, Playwright connects to `http://localhost:3000`. You can change this by setting `PLAYWRIGHT_BASE_URL` (e.g., `PLAYWRIGHT_BASE_URL=http://localhost pnpm test:e2e` to hit the Nginx gateway).
+Nuxt 4 SPA with **Feature-Sliced Design (FSD)** architecture, Tailwind CSS, Nuxt UI, Pinia, and i18n.
 
 ---
 
-## Guidelines for Writing Testable Components
+## Architecture: Feature-Sliced Design
 
-To ensure UI changes do not break tests, we follow these best practices for element selection and component structure.
+The `app/` directory follows [FSD](https://feature-sliced.design/) layering. Layers are listed from most abstract to most business-specific. **Higher layers may import from lower layers, never the reverse.**
 
-### 1. Use `data-testid` for Selecting Elements
-
-**Do not** rely on CSS classes, element IDs, or complex DOM hierarchies for test selections. These are prone to change during styling updates and refactoring.
-
-Instead, add a `data-testid` attribute to elements that need to be interacted with or asserted in tests.
-
-**Bad:**
-```vue
-<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-  Submit
-</button>
-<!-- Playwright: await page.locator('.bg-blue-500').click() -->
+```
+app/
+├── pages/          # Nuxt routing — thin page shells, compose from widgets/features
+├── layouts/        # Nuxt layouts — compose from widgets
+├── middleware/      # Nuxt route guards
+├── plugins/         # Nuxt plugins (HTTP client init)
+├── assets/          # Global styles
+│
+├── widgets/         # Compound UI blocks (combine features + entities)
+│   └── sidebar/ui/sidebar-nav.vue
+│
+├── features/        # User-facing feature slices
+│   └── auth/
+│       └── model/auth-store.ts   # Pinia auth store
+│
+└── shared/          # Reusable code — zero business logic
+    ├── api/         # Typed API composables
+    │   └── use-api-fetch.ts
+    ├── lib/         # Utilities and helpers
+    │   └── safe-cookie.ts
+    ├── model/       # Shared Pinia stores
+    │   └── ui-store.ts
+    └── types/       # Auto-generated and shared types
+        └── schema.ts
 ```
 
-**Good:**
-```vue
-<button data-testid="submit-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-  Submit
-</button>
-<!-- Playwright: await page.getByTestId('submit-button').click() -->
+### Layer responsibilities
+
+| Layer | Contains | May import from |
+|-------|----------|-----------------|
+| `pages/` | Route entry points | `widgets`, `features`, `shared` |
+| `layouts/` | App shell templates | `widgets`, `shared` |
+| `widgets/` | Composite UI blocks | `features`, `entities`, `shared` |
+| `features/` | Business interactions | `entities`, `shared` |
+| `entities/` | Business entities | `shared` |
+| `shared/` | Infrastructure, utilities | nothing project-internal |
+
+### Naming convention
+
+All files use **kebab-case**: `auth-store.ts`, `use-api-fetch.ts`, `safe-cookie.ts`, `sidebar-nav.vue`.  
+Functions and exports remain camelCase per JavaScript convention.
+
+### Adding new code
+
+- **New page** → `app/pages/my-page.vue` (Nuxt auto-routing)
+- **New feature** → `app/features/my-feature/model/my-feature-store.ts` + `ui/` subfolder if it has components
+- **New widget** → `app/widgets/my-widget/ui/my-widget.vue` (auto-imported by Nuxt)
+- **Shared utility** → `app/shared/lib/my-util.ts`
+- **Shared composable** → `app/shared/api/use-my-composable.ts`
+
+### Path aliases
+
+Configured in `nuxt.config.ts` for clean cross-layer imports:
+
+| Alias | Resolves to |
+|-------|-------------|
+| `@shared` | `app/shared/` |
+| `@features` | `app/features/` |
+| `@widgets` | `app/widgets/` |
+
+Example: `import { useAuthStore } from '@features/auth/model/auth-store'`
+
+---
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start dev server (http://localhost:3000)
+pnpm dev
+
+# Type check
+pnpm typecheck
+
+# Lint
+pnpm lint
+pnpm lint:fix
+
+# Build for production
+pnpm build
 ```
 
-### 2. Standardize `data-testid` Naming Conventions
+---
 
-Use consistent, descriptive kebab-case names for test IDs:
-- `{action}-button`: `submit-button`, `cancel-button`, `delete-user-button`
-- `{entity}-list`: `user-list`, `product-list`
-- `{field}-input`: `email-input`, `password-input`
-- `{context}-{element}`: `login-form-submit`, `header-nav-login`
+## Testing
 
-### 3. Favor User-Facing Locators Where Appropriate
+### Unit tests (Vitest)
 
-While `data-testid` is the most resilient fallback, Playwright recommends using user-facing attributes where semantic HTML is properly used.
-
-- `getByRole('button', { name: 'Submit' })`
-- `getByLabel('Password')`
-- `getByPlaceholder('Search...')`
-
-**Rule of Thumb:** If the text/role is core to the feature and rarely changes (e.g., a "Log in" button or "Email" label), use semantic locators (`getByRole`, `getByLabel`). If the element lacks text, or the text changes often based on i18n, use `data-testid`.
-
-### 4. Keep Components Isolated and Deterministic
-
-- **Mock external dependencies** in unit tests where possible.
-- E2E tests should use deterministic data. Run E2E tests against an isolated test database or use predictable seeds.
-- Avoid relying on precise timeouts. Use Playwright's auto-waiting features (`await expect(page.getByTestId('loading-spinner')).toBeHidden()`).
-
-### 5. Expose State for Tests (If Necessary)
-
-Sometimes you need to know if a Nuxt app has finished hydrating. Nuxt and Vue usually handle this seamlessly, but avoid animations blocking test interactions. Playwright automatically waits for actionability, but you can disable animations in tests via CSS if they cause flakiness.
-
-```css
-/* Example: Disable animations during tests */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+```bash
+pnpm test
 ```
 
-(Playwright handles this well natively, but it's good to keep in mind for heavy UI transitions.)
+Tests live in `tests/` alongside `tests/e2e/`. Unit tests import directly from `app/` using relative paths.
+
+### E2E tests (Playwright)
+
+Requires a running application (dev or Docker):
+
+```bash
+# Docker stack
+docker-compose up -d
+
+# Install browsers (first time only)
+pnpm test:e2e:install
+
+# Run headlessly
+pnpm test:e2e
+
+# Run with UI runner (debugging)
+pnpm test:e2e:ui
+```
+
+Default base URL: `http://localhost:3000`. Override with `PLAYWRIGHT_BASE_URL`.
+
+### Writing testable components
+
+- Use `data-testid` attributes for elements that tests interact with
+- Prefer kebab-case IDs: `submit-button`, `email-input`, `user-list`
+- Use semantic Playwright locators (`getByRole`, `getByLabel`) when text is stable
+- Avoid relying on CSS classes in test selectors
+
+---
+
+## Regenerating API types
+
+```bash
+pnpm generate:api
+```
+
+This overwrites `app/shared/types/schema.ts` from the backend OpenAPI spec. Do not edit that file manually.

@@ -1,11 +1,5 @@
 {
   "welcome": "Welcome",
   "login": "Login",
-  "dashboard": "Dashboard",
-  "logout": "Logout",
-  "theme": {
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System"
-  }
+  "Authorization": "Authorization"
 }

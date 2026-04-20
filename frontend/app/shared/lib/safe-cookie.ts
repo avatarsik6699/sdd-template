@@ -2,33 +2,13 @@ import { useCookie } from '#imports';
 import type { CookieOptions } from 'nuxt/app';
 
 export namespace SafeCookieTypes {
-  /**
-   * Configuration for cookie storage
-   * @property key - The key for storing data in the cookie
-   * @property version - The version of the data (used for migration and validation)
-   */
   export type KeyWithVersion = { key: string; version: string };
-
-  /**
-   * Wrapper for data in the cookie with versioning
-   * @template T - The type of the stored data
-   * @property version - The version of the data
-   * @property data - The actual data
-   */
   export type DataWithVersion<T> = { version: string; data: T };
-
-  /**
-   * Configuration for data migration between versions
-   * @property migrate - Migration function from old version to new version (optional).
-   */
   export type WithMigration<T> = {
     migrate?: (oldData: unknown, oldVersion: string, newVersion: string) => T;
   };
 }
 
-/**
- * Saves data to a cookie with versioning
- */
 const setItem = <T>(args: {
   keyWithVersion: SafeCookieTypes.KeyWithVersion;
   value: T;
@@ -44,7 +24,6 @@ const setItem = <T>(args: {
   try {
     const cookie = useCookie<SafeCookieTypes.DataWithVersion<T> | null>(
       keyWithVersion.key,
-      // Cast options to generic any to avoid deep union type strictness with useCookie
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       options as any
     );
@@ -54,9 +33,6 @@ const setItem = <T>(args: {
   }
 };
 
-/**
- * Retrieves data from a cookie with version checking
- */
 const getItem = <T>(args: {
   keyWithVersion: SafeCookieTypes.KeyWithVersion;
   migrationConfig?: SafeCookieTypes.WithMigration<T>;
@@ -71,19 +47,16 @@ const getItem = <T>(args: {
       return undefined;
     }
 
-    // Check for version existence (for backward compatibility with old unversioned data)
     if (!parsed.version) {
       console.warn(`[safeCookie]: No version found in cookie [${keyWithVersion.key}], clearing...`);
       removeItem({ keyWithVersion });
       return undefined;
     }
 
-    // If versions match, return the data
     if (parsed.version === keyWithVersion.version) {
       return parsed.data as T;
     }
 
-    // If versions do not match and there is a migration function, attempt to migrate
     if (migrationConfig?.migrate) {
       console.warn(
         `[safeCookie]: Migrating cookie [${keyWithVersion.key}] from v${parsed.version} to v${keyWithVersion.version}`
@@ -96,7 +69,6 @@ const getItem = <T>(args: {
           keyWithVersion.version
         );
 
-        // Save the migrated data
         setItem({ keyWithVersion, value: migratedData });
 
         return migratedData;
@@ -107,7 +79,6 @@ const getItem = <T>(args: {
       }
     }
 
-    // If versions do not match and there is no migration, delete old data
     console.warn(
       `[safeCookie]: Version mismatch in cookie [${keyWithVersion.key}]: expected ${keyWithVersion.version}, got ${parsed.version}. Clearing...`
     );
@@ -122,9 +93,6 @@ const getItem = <T>(args: {
   }
 };
 
-/**
- * Removes data from a cookie
- */
 const removeItem = (args: {
   keyWithVersion: Pick<SafeCookieTypes.KeyWithVersion, 'key'>;
 }): void => {
@@ -133,9 +101,6 @@ const removeItem = (args: {
   cookie.value = null;
 };
 
-/**
- * Checks if data exists in a cookie
- */
 const hasItem = (args: { keyWithVersion: SafeCookieTypes.KeyWithVersion }): boolean => {
   return getItem(args) !== undefined;
 };

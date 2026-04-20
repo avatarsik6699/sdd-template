@@ -1,6 +1,6 @@
 import { navigateTo, useNuxtApp } from '#imports';
 import { defineStore } from 'pinia';
-import { safeCookie } from '~/utils/safeCookie';
+import { safeCookie } from '@shared/lib/safe-cookie';
 
 export const AUTH_COOKIE_CONFIG = {
   key: 'app_token',
@@ -35,7 +35,6 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    // Left for backwards compatibility if called elsewhere, though tokens are now auto-managed by cookies
     loadFromStorage() {
       // Cookies are automatically loaded, nothing to do here
     },
@@ -47,7 +46,6 @@ export const useAuthStore = defineStore('auth', {
         const { $api } = useNuxtApp();
 
         // Use URLSearchParams because FastAPI OAuth2 expects application/x-www-form-urlencoded
-
         const data = await $api<{ access_token: string; token_type: string }>(
           '/api/v1/auth/login',
           {

@@ -1,5 +1,5 @@
 import type { UseFetchOptions } from 'nuxt/app';
-import type { paths } from '~/types/schema';
+import type { paths } from '@shared/types/schema';
 import { useNuxtApp, useFetch } from '#imports';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch';

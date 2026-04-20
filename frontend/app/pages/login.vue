@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth';
+import { useAuthStore } from '@features/auth/model/auth-store';
 import { ref, onMounted } from 'vue';
 
 definePageMeta({ layout: 'blank' });

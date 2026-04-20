@@ -1,6 +1,6 @@
 import { defineNuxtPlugin, useRuntimeConfig, navigateTo } from '#imports';
-import { safeCookie } from '~/utils/safeCookie';
-import { AUTH_COOKIE_CONFIG } from '~/stores/auth'; // We'll define this later in auth store
+import { safeCookie } from '@shared/lib/safe-cookie';
+import { AUTH_COOKIE_CONFIG } from '@features/auth/model/auth-store';
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();

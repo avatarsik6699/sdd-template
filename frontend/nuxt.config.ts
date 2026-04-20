@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'node:url';
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -9,6 +11,21 @@ export default defineNuxtConfig({
 
   modules: ['@nuxt/ui', '@nuxtjs/i18n', '@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
+
+  // FSD layer path aliases
+  alias: {
+    '@shared': fileURLToPath(new URL('./app/shared', import.meta.url)),
+    '@features': fileURLToPath(new URL('./app/features', import.meta.url)),
+    '@widgets': fileURLToPath(new URL('./app/widgets', import.meta.url)),
+  },
+
+  // Auto-import composables/stores from FSD directories (paths relative to srcDir)
+  imports: {
+    dirs: ['shared/api', 'shared/lib', 'shared/model', 'features/auth/model'],
+  },
+
+  // Auto-import components from FSD widget layer
+  components: [{ path: '~/widgets', pathPrefix: false }],
 
   i18n: {
     locales: [
