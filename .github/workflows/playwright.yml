@@ -10,7 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Create .env from example
+      run: cp .env.example .env
+
     # We need to spin up the docker-compose stack for tests to run against
     - name: Start Docker stack
       run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
