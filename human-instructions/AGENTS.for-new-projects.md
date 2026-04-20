@@ -8,7 +8,7 @@
 
 1. **Scope Lock**: Do only what is specified in the active `docs/PHASE_XX.md`. Do not assume future phases.
 2. **No Guessing**: If a requirement is genuinely ambiguous and risky, ask a concise terminal question instead of inventing behavior.
-3. **Gates First**: Before each commit, run the phase-gate workflow for the current phase. Commit only if the report is PASS.
+3. **Gates First**: Before each commit, run the phase-gate workflow for the current phase. Commit only if the report is PASS. Automated green is not enough if `Architect Review Notes` still has unchecked items.
 4. **Atomic Commits**: Use `feat|fix|chore|docs|test|refactor(scope): description`. One commit = one logical task.
 5. **Security**: No hardcodes, no secrets in code. Use `.env`, environment variables, and typed settings.
 6. **Context Sync**: After completing each phase, run the context-update workflow to refresh `docs/CONTEXT.md`, `docs/STATE.md`, and `docs/CHANGELOG.md`.
@@ -61,7 +61,7 @@ Different agent runtimes may expose these as slash commands, skills, prompts, or
 
 - `spec-sync`: run immediately after modifying `docs/SPEC.md`
 - `phase-init`: scaffold the next `docs/PHASE_XX.md`
-- `phase-gate`: run validation checks before commit
+- `phase-gate`: run validation checks before commit and fail if `Architect Review Notes` still has unchecked items
 - `context-update`: sync `CONTEXT.md`, `STATE.md`, and `CHANGELOG.md` after a completed phase
 
 If your runtime supports slash commands or native skills, map them to these workflows. If not, execute the corresponding protocol manually from the repository docs.

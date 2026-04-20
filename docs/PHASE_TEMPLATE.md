@@ -85,7 +85,11 @@ None
 
 ## Gate Checks
 
-All must be green before committing. Run with `/phase-gate [XX]`.
+Run `/phase-gate [XX]` before committing.
+
+`/phase-gate` returns full PASS only when:
+- Automated checks are green
+- All architect review items below are resolved (checked off)
 
 ```bash
 # 1. Infrastructure
@@ -118,6 +122,16 @@ pnpm test:e2e                   # parses test-results/junit.xml
 
 ---
 
+## Architect Review Notes
+
+Use this section after manual verification. Add one checkbox item per issue the architect wants fixed before the phase can close.
+Leave the item unchecked while it is still open. Check it off only after the fix is implemented and re-verified.
+If manual verification found nothing, keep the default checked line below.
+
+- [x] No architect review issues recorded
+
+---
+
 ## Atomic Commit Message
 
 ```
@@ -128,7 +142,8 @@ feat(phase-[XX]): [short description — what was built, not how]
 
 ## Post-Phase Checklist
 
-- [ ] All gate checks green
+- [ ] All automated gate checks green
+- [ ] All architect review notes resolved
 - [ ] `docs/CONTEXT.md` updated — run `/context-update [XX]`
 - [ ] `docs/STATE.md` phase row updated to `✅ done`
 - [ ] `docs/CHANGELOG.md` entry added (if CONTEXT.md version bumped)

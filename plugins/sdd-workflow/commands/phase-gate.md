@@ -11,6 +11,7 @@ Run the repository's gate checks and return an honest PASS/FAIL report.
 1. Resolve the phase number from arguments or `docs/STATE.md`.
 2. Read `docs/PHASE_XX.md`.
 3. Note any phase-specific Gate Checks listed there.
+4. Check whether `Architect Review Notes` contains any unchecked items.
 
 ## Plan
 
@@ -19,6 +20,7 @@ Run the repository's gate checks and return an honest PASS/FAIL report.
 3. Run Playwright only if the full stack is already healthy.
 4. Run the smoke test.
 5. Summarize everything in one gate report.
+6. Return PASS only if automated checks are green and architect review notes have no unchecked items.
 
 ## Commands
 
@@ -45,9 +47,10 @@ Return:
 - vitest status
 - Playwright status
 - smoke test status
+- architect review status
 - overall PASS/FAIL
 
 ## Next Steps
 
 - If PASS: say it is safe to commit.
-- If FAIL: list the concrete failing checks and likely fixes.
+- If FAIL: list the concrete failing checks or unchecked architect review items and likely fixes.

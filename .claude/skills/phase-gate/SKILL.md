@@ -1,6 +1,6 @@
 ---
 name: phase-gate
-description: Run all gate checks for the current phase before committing. Checks docker infrastructure, pytest, Nuxt prepare, frontend type-checks, vitest, Playwright e2e, and a smoke endpoint. Reports PASS or FAIL.
+description: Run all gate checks for the current phase before committing. Checks docker infrastructure, pytest, Nuxt prepare, frontend type-checks, vitest, Playwright e2e, a smoke endpoint, and unresolved architect review notes. Reports PASS or FAIL.
 allowed-tools: Bash, Read
 argument-hint: "[phase number, e.g. 01]"
 ---
@@ -21,11 +21,14 @@ If `$ARGUMENTS` is provided, read `docs/PHASE_$ARGUMENTS.md`.
 If no argument, read `docs/STATE.md` and find the phase with status `🔄 in-progress`. Then read that phase file.
 If neither resolves, ask: "Which phase number should I check? (e.g. /phase-gate 01)"
 
-## Step 2 — Read gate commands
+## Step 2 — Read gate commands and architect review notes
 
 From the "Gate Checks" section of the phase file, note:
 - Any smoke test URL and expected response
 - Any phase-specific commands beyond the standard set
+
+From the `Architect Review Notes` section of the phase file, collect every unchecked checklist item.
+Treat each unchecked item as an open issue that blocks PASS until it is resolved and checked off.
 
 ## Step 3 — Check infrastructure
 
@@ -124,16 +127,20 @@ Output in this exact format:
 | vitest         | ✅/❌  | N passed, M failed         |
 | e2e (playwright)| ✅/❌  | N passed, M failed — report: frontend/playwright-report/index.html |
 | Smoke test     | ✅/❌  | HTTP NNN                   |
+| Architect review | ✅/❌ | no open items / N unchecked items |
 
 **Overall: ✅ PASS / ❌ FAIL**
 ```
 
+If architect review is ❌, list each unchecked item verbatim under an `Open architect review notes` heading.
+
 If **PASS**: confirm it is safe to commit with the atomic commit message from the phase file.
 
-If **FAIL**: list each failed check with the specific error output. Do NOT suggest committing. Suggest fixes where obvious.
+If **FAIL**: list each failed check with the specific error output. Also list unchecked architect review notes if any remain. Do NOT suggest committing. Suggest fixes where obvious.
 
 ## Rules
 - Do not run `docker compose down` or any destructive command
 - Do not edit any files
 - Do not commit
 - Report every check even if a previous one failed — give the full picture
+- Do not return PASS while any architect review checklist item remains unchecked

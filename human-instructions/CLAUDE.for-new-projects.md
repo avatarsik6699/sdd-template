@@ -8,7 +8,7 @@
 
 1. **Scope Lock**: Do only what is specified in the active `docs/PHASE_XX.md`. Do not assume the realization of future phases.
 2. **No Guessing**: If the requirement is ambiguous → ask a question in the terminal. Don't write code "to suit your taste".
-3. **Gates First**: Before each commit, run `/phase-gate N`. Commit only if the gate report is ✅ PASS.
+3. **Gates First**: Before each commit, run `/phase-gate N`. Commit only if the gate report is ✅ PASS. Automated green is not enough if `Architect Review Notes` still contains unchecked items.
 4. **Atomic Commits**: The format is `feat|fix|chore|docs|test|refactor(scope): description`. 1 commit = 1 logical task.
 5. **Security**: No hardcodes, no secrets in the code. Use `.env`, `os.getenv()`, `Pydantic Settings`.
 6. **Output**: First, the plan → waiting `✅` → code → tests → commit. Don't skip the steps.
@@ -159,12 +159,14 @@ When `docs/SPEC.md` is modified:
 2.  /phase-init N       → creates docs/PHASE_N.md scaffold
 3.  Architect fills Contracts + Files sections in PHASE_N.md
 4.  AI implements scope (on feat/phase-N branch)
-5.  /phase-gate N       → all checks green (✅ PASS)
-6.  git commit          → feat(phase-N): [description]
-7.  /context-update N   → updates CONTEXT.md, STATE.md, CHANGELOG.md
-8.  PR to develop       → human review → merge
-9.  git tag -a v0.N.0 -m "Phase N: [title]"
-10. /phase-init N+1     → repeat
+5.  /phase-gate N       → automated checks baseline
+6.  Architect manual verification → add unchecked items to `Architect Review Notes` if needed
+7.  /phase-gate N       → ✅ PASS only when automated checks are green and review notes are fully checked off
+8.  git commit          → feat(phase-N): [description]
+9.  /context-update N   → updates CONTEXT.md, STATE.md, CHANGELOG.md
+10. PR to develop       → human review → merge
+11. git tag -a v0.N.0 -m "Phase N: [title]"
+12. /phase-init N+1     → repeat
 ```
 
 ---
