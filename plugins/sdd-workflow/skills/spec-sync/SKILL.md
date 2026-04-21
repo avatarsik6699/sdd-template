@@ -39,23 +39,4 @@ retrieval:
 
 # spec-sync
 
-Canonical portable playbook: `docs/workflows/spec-sync.md`
-
-Use this skill after `docs/SPEC.md` changes, especially when the change may affect contracts, gates, or phase sequencing.
-
-Workflow:
-
-1. Read `docs/SPEC.md`, `docs/CONTEXT.md`, `docs/STATE.md`, `docs/CHANGELOG.md`, and all `docs/PHASE_*.md`.
-2. Inspect the recent diff and the user-provided description of what changed.
-3. Determine impacted domains and phases.
-4. Add a top-level `docs/CHANGELOG.md` entry.
-5. Update `docs/CONTEXT.md` only when the technical contract changed.
-6. Mark affected phases as `NEEDS_REVIEW` in `docs/STATE.md`.
-7. Patch the affected phase files surgically.
-8. Report what changed, what needs review, and what is still unaffected.
-
-Rules:
-
-- Never rewrite a phase file from scratch.
-- Prefer false positives over missed downstream dependencies.
-- Do not commit.
+Execute the canonical playbook in [docs/workflows/spec-sync.md](../../../../docs/workflows/spec-sync.md). That file is the source of truth for impact analysis, the CHANGELOG entry format, and all sync rules.

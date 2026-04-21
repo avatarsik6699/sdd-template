@@ -91,4 +91,4 @@ For multi-model projects:
 - keep runtime-specific adapters in `CLAUDE.md`, Codex config, and other agent-specific files
 - store reusable workflow procedures in `docs/workflows/`
 - prefer MCP when supported, but always document a CLI fallback
-- add lightweight repo-memory docs such as `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/TESTING.md`, `docs/RUNBOOK.md`, and `docs/KNOWN_GOTCHAS.md`
+- add lightweight repo-memory docs such as `docs/DECISIONS.md` and `docs/KNOWN_GOTCHAS.md`

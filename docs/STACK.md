@@ -87,6 +87,25 @@ Change these in [alembic/versions/0001_users_table.py](../alembic/versions/0001_
 
 ---
 
+## Gate Commands
+
+The `/phase-gate` workflow (see [docs/workflows/phase-gate.md](workflows/phase-gate.md)) dispatches to these stack-specific commands. **When swapping stacks, rewrite this section; the gate workflow itself is stack-agnostic.**
+
+| # | Check | Command | Required services / preconditions | Pass signal |
+|---|-------|---------|-----------------------------------|-------------|
+| 1 | Infrastructure | `docker compose ps` | `db`, `redis` healthy (run `docker compose up -d db redis` first if needed) | Both containers report `healthy` |
+| 2 | Backend tests | `uv run pytest tests/ -v` | none beyond step 1 | 0 failed, 0 errored |
+| 3 | Type generation | `cd frontend && pnpm nuxt prepare` | none | `.nuxt/` exists and command exits 0 |
+| 4 | Frontend typecheck | `cd frontend && pnpm typecheck` | step 3 succeeded | 0 errors |
+| 5 | Frontend unit | `cd frontend && pnpm test` | step 3 succeeded | 0 failed |
+| 6 | E2E (Playwright) | `cd frontend && pnpm test:e2e` | full stack healthy: `db`, `redis`, `backend`, `frontend`, `nginx`. Do NOT auto-start from the gate. | `frontend/test-results/junit.xml` shows 0 failed; HTML report at `frontend/playwright-report/index.html` |
+| 7 | Smoke | `curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/health` (or the phase-file override) | backend running | HTTP 200 |
+
+Notes:
+
+- If a phase file's Gate Checks section lists a phase-specific smoke URL or extra commands, use those in addition to the baseline above.
+- The e2e row is the only check with a hard precondition beyond step 1. If `db`, `redis`, `backend`, `frontend`, or `nginx` is missing or unhealthy, the gate must record e2e ❌ with the note `stack not up — run docker compose up -d and re-run`, and skip Playwright (do not auto-start).
+
 ## Testing
 
 ### Backend (pytest)

@@ -1,16 +1,14 @@
 # Workflow Playbooks
 
-These files are the model-agnostic versions of the workflow procedures that also exist as Claude Code skills under `.claude/skills/`.
+These files are the **canonical source of truth** for the four SDD workflow procedures. Runtime wrappers (Claude Code skills under `.claude/skills/`, Codex plugin under `plugins/sdd-workflow/`) are thin stubs that point here.
 
-Use them when:
+To change a workflow, edit only these files. The runtime wrappers do not contain workflow logic.
 
-- the agent runtime does not support Claude slash skills
-- you want one canonical workflow that multiple agents can follow
-- you want to review or refine the process without editing agent-specific wrappers first
+Playbooks:
 
-Available playbooks:
+- [phase-init.md](./phase-init.md) — scaffold a new `docs/PHASE_XX.md`
+- [phase-gate.md](./phase-gate.md) — validate a phase before commit
+- [spec-sync.md](./spec-sync.md) — propagate a `docs/SPEC.md` change
+- [context-update.md](./context-update.md) — finalize a completed phase
 
-- [phase-init.md](./phase-init.md)
-- [phase-gate.md](./phase-gate.md)
-- [context-update.md](./context-update.md)
-- [spec-sync.md](./spec-sync.md)
+Stack-specific commands for `phase-gate` live in [../STACK.md → Gate Commands](../STACK.md#gate-commands). Derived projects that swap stacks rewrite that section; the workflow playbook itself stays untouched.

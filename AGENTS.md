@@ -1,57 +1,48 @@
-# Global Agent Rules
+# Agent rules for working on the `sdd-template` repository itself
 
-## What Is Portable Here
-
-This repository contains two layers of agent guidance:
-
-- `AGENTS.md` files: model-agnostic rules intended for any capable coding agent
-- `CLAUDE.md` and `.claude/skills/`: Claude Code specific adapters, slash commands, and tool policies
-
-When both exist, prefer this file for shared process rules and treat Claude-specific files as optional automation on top.
+> This repository IS the template. You are maintaining reusable scaffolding, not building a product.
+> The canonical rules that ship to **derived projects** live in [`human-instructions/AGENTS.for-new-projects.md`](human-instructions/AGENTS.for-new-projects.md).
+> This file only covers how to change the template.
 
 ## Template Repo Scope
 
-This repository is the template itself, not an active product.
+- Do not treat `docs/` as live requirements — they are template files with `[PLACEHOLDERS]`.
+- Do not run `/phase-gate`, `/phase-init`, `/spec-sync`, or `/context-update` here. Those skills are for derived projects. Test them in a scratch directory.
+- A change belongs in this repo only if it improves the template for future projects.
+- Keep references consistent across `README.md`, `CLAUDE.md`, `AGENTS.md`, `human-instructions/`, `.claude/skills/`, and `plugins/sdd-workflow/`.
 
-- Do not treat `docs/` as live requirements. They are template files with placeholders.
-- Only make changes that improve the template for future projects.
-- Keep references consistent across `README.md`, `CLAUDE.md`, `AGENTS.md`, `human-instructions/`, and `.claude/skills/`.
+## Source of Truth Map
 
-## Documentation Lookup
+When you change workflow behavior, edit the canonical playbook — never the wrapper.
 
-Before writing or reviewing code that depends on an external library or framework, use an up-to-date documentation source.
+| Concern | Canonical source |
+|---|---|
+| Workflow procedure (phase-init, phase-gate, spec-sync, context-update) | [`docs/workflows/*.md`](docs/workflows/) |
+| Rules that ship to derived projects | [`human-instructions/AGENTS.for-new-projects.md`](human-instructions/AGENTS.for-new-projects.md) |
+| Claude-specific adapter for derived projects | [`human-instructions/CLAUDE.for-new-projects.md`](human-instructions/CLAUDE.for-new-projects.md) |
+| Stack-specific commands (incl. gate commands) | [`docs/STACK.md`](docs/STACK.md) |
+| Recurring pitfalls & permission-denied protocol | [`docs/KNOWN_GOTCHAS.md`](docs/KNOWN_GOTCHAS.md) |
 
-Preferred order:
-- a configured docs MCP/integration such as Context7, if available in the current agent runtime
-- for OpenAI products specifically, the official OpenAI developer documentation MCP server, if available
-- official library documentation
-- primary-source docs or API references
+Runtime wrappers (`.claude/skills/*/SKILL.md`, `plugins/sdd-workflow/{skills,commands}/*.md`) are thin stubs that point at `docs/workflows/`.
 
-Do not rely on stale model memory alone for library APIs.
+## Library Documentation Lookup
 
-## Repo Memory Files
+Before writing or reviewing code that uses an external library, use up-to-date docs in this order: Context7 via MCP (if available) → `ctx7` CLI → official docs. Do not rely on training-data knowledge alone.
 
-Keep lightweight project memory in repository docs so different agent runtimes can recover the same high-signal context across sessions.
+## Filesystem Permission Failures
 
-Recommended files:
-- `docs/ARCHITECTURE.md` for system shape, boundaries, and responsibilities
-- `docs/DECISIONS.md` for ADR-style technical decisions
-- `docs/TESTING.md` for the real validation strategy and required checks
-- `docs/RUNBOOK.md` for operational commands, deploy notes, and recovery steps
-- `docs/KNOWN_GOTCHAS.md` for recurring pitfalls, edge cases, and local-environment traps
+On `EACCES` / `EPERM` / "Permission denied" / "Read-only file system", **stop immediately** and follow the handoff protocol in [`docs/KNOWN_GOTCHAS.md § Docker-owned files`](docs/KNOWN_GOTCHAS.md#docker-owned-files-break-host-operations-eacces--eperm--read-only). Never `sudo`, `chmod -R 777`, delete-and-recreate, or silently loop.
 
-Keep these files concise and current. Prefer updating them over relying on conversational memory.
+## Git Workflow (for the template itself)
 
-## Skills And Protocols
+- Branch from `main`: `fix/description` or `feat/description`. No `feat/phase-N` branches here — that convention is for derived projects.
+- Conventional commits: `feat|fix|chore|docs|refactor(scope): description`.
+- No direct push to `main` — open a PR.
+- No `--force`, `reset --hard`, or `--no-verify` without explicit user instruction.
 
-The workflow protocols in `.claude/skills/` are still useful even outside Claude Code, but they are not universally executable as native slash commands.
+## What "done" means
 
-Portable interpretation:
-- `spec-sync`: protocol for propagating `docs/SPEC.md` changes
-- `phase-init`: protocol for scaffolding a new `docs/PHASE_XX.md`
-- `phase-gate`: protocol for running validation checks before commit
-- `context-update`: protocol for syncing `docs/CONTEXT.md`, `docs/STATE.md`, and `docs/CHANGELOG.md`
-
-If an agent runtime does not support those skills natively, execute the corresponding markdown procedure manually.
-
-Canonical portable playbooks live in `docs/workflows/`.
+- Template files are internally consistent (no broken references, no stale placeholders).
+- The two derived-project files (`human-instructions/AGENTS.for-new-projects.md`, `human-instructions/CLAUDE.for-new-projects.md`) reflect intended behavior.
+- Skill wrappers under `.claude/skills/` and `plugins/sdd-workflow/` still resolve to the canonical playbook.
+- `README.md` reflects any structural changes.

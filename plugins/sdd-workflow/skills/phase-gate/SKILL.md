@@ -46,28 +46,6 @@ retrieval:
 
 # phase-gate
 
-Canonical portable playbook: `docs/workflows/phase-gate.md`
+Execute the canonical playbook in [docs/workflows/phase-gate.md](../../../../docs/workflows/phase-gate.md). Stack-specific commands are dispatched from [docs/STACK.md → Gate Commands](../../../../docs/STACK.md#gate-commands).
 
-Use this skill when the user wants an honest PASS/FAIL view of the current phase.
-
-Workflow:
-
-1. Resolve the target phase from arguments or from `docs/STATE.md`.
-2. Read the phase file's Gate Checks section and `Architect Review Notes`.
-3. Check Docker infrastructure state.
-4. Run backend tests.
-5. Run `pnpm nuxt prepare` so `.nuxt/` types exist.
-6. Run frontend type checks.
-7. Run frontend unit tests.
-8. Run Playwright end-to-end tests only if the full stack is already up.
-9. Run the smoke check.
-10. Mark architect review as failed if any checklist item in `Architect Review Notes` is still unchecked.
-11. Produce a structured gate report with PASS/FAIL and exact failing areas.
-
-Rules:
-
-- Do not edit code.
-- Do not commit.
-- Do not hide failures behind early exit when later checks can still provide useful signal.
-- If e2e preconditions are missing, report that clearly rather than masking it.
-- Do not return PASS while unchecked architect review notes remain.
+Read-only: do not edit code, do not commit. Do not return PASS while unchecked architect review notes remain.

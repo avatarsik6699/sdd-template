@@ -11,8 +11,8 @@ The SDD pipeline is a **stack-agnostic process** for delivering software in atom
 
 - **Documents** encode intent (`SPEC`), a living contract (`CONTEXT`), progress (`STATE`), a change history (`CHANGELOG`), and scoped tasks (`PHASE_XX`).
 - **Skills** (slash commands) automate phase scaffolding, gate checks, and doc synchronisation.
-- **Rules** in [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) keep AI agents inside the phase scope and force a passing gate before commit.
-- **Repo memory files** keep architecture, testing, and operational context stable across agent sessions.
+- **Rules** in [AGENTS.md](AGENTS.md) (with [CLAUDE.md](CLAUDE.md) as a thin Claude adapter) keep AI agents inside the phase scope and force a passing gate before commit.
+- **Repo memory files** ([docs/DECISIONS.md](docs/DECISIONS.md), [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md)) keep architecture and operational context stable across agent sessions.
 
 The reference implementation ships with a concrete stack (FastAPI + Nuxt 4 + PostgreSQL + Docker).
 Everything stack-specific — setup commands, directory layout, testing tools, migrations, and the
@@ -93,14 +93,11 @@ Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.m
 | [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) | What exactly should the AI implement this iteration? |
 | [docs/STACK.md](docs/STACK.md) | Stack-specific setup, testing, layout, and conventions |
 | [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md) | Context7, MCP, and cross-agent setup guidance |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | High-signal map of the system shape and boundaries |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Short ADR-style technical decisions worth remembering |
-| [docs/TESTING.md](docs/TESTING.md) | The real test strategy and required validation commands |
-| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Operational commands, deploy notes, and recovery steps |
 | [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md) | Repeated pitfalls, symptoms, and shortest safe fixes |
 | [docs/workflows/README.md](docs/workflows/README.md) | Portable workflow playbooks for phase-init, gate, sync, and context update |
-| [AGENTS.md](AGENTS.md) | Model-agnostic AI rules and workflow mapping |
-| [CLAUDE.md](CLAUDE.md) | AI rules — scope lock, gate-before-commit, `ctx7`, permission handoff |
+| [AGENTS.md](AGENTS.md) | Canonical rules — scope lock, gate-before-commit, docs lookup, permission handoff |
+| [CLAUDE.md](CLAUDE.md) | Thin Claude adapter — points at AGENTS.md |
 
 ---
 

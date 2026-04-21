@@ -2,7 +2,7 @@
 
 FastAPI + SQLAlchemy 2.0 async + Alembic + Pydantic v2. Python 3.13+.
 
-This file is the backend style guide. Read it before editing anything under [app/](.) or [tests/](../tests/). Root-level project rules live in [../CLAUDE.md](../CLAUDE.md); this file only covers what's module-specific.
+This file is the backend style guide. Read it before editing anything under [app/](.) or [tests/](../tests/). Root-level project rules live in [../AGENTS.md](../AGENTS.md); this file only covers what's module-specific.
 
 ---
 
@@ -80,17 +80,17 @@ Naming: `tests/test_<resource>.py`. Fixture-style factories over module-level te
 
 ## Mandatory rules (duplicated locally — these are load-bearing)
 
-These two rules are repeated here because an AI editing inside [app/](.) often won't read the root [AGENTS.md](../AGENTS.md) or [CLAUDE.md](../CLAUDE.md) first, and missing either one costs a lot of tokens.
+These two rules are repeated here because an AI editing inside [app/](.) often won't read the root [AGENTS.md](../AGENTS.md) first, and missing either one costs a lot of tokens.
 
-1. **Use up-to-date docs before writing code against any external library** — FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, python-jose, bcrypt, or any third-party package. Prefer a configured docs MCP such as Context7 when available, then `ctx7` CLI, then official docs. Do NOT rely on training data. Full rule in [../AGENTS.md](../AGENTS.md#documentation-lookup), [../CLAUDE.md](../CLAUDE.md#library-documentation-lookup-mandatory), and [../docs/AGENT_SETUP.md](../docs/AGENT_SETUP.md).
+1. **Use up-to-date docs before writing code against any external library** — FastAPI, SQLAlchemy, Pydantic, Alembic, httpx, python-jose, bcrypt, or any third-party package. Prefer Context7 via MCP when available, then `ctx7` CLI, then official docs. Do NOT rely on training data. Full rule in [../AGENTS.md](../AGENTS.md#library-documentation-lookup).
 
-2. **On `EACCES` / `EPERM` / "Permission denied"** — stop immediately, post the handoff message from [../CLAUDE.md](../CLAUDE.md#filesystem-permission-failures--stop-and-ask) to the user with the real path, wait for the keyword `continue` before retrying. Never `sudo`, `chmod`, or loop.
+2. **On `EACCES` / `EPERM` / "Permission denied"** — stop immediately, post the handoff message from [../docs/KNOWN_GOTCHAS.md](../docs/KNOWN_GOTCHAS.md#docker-owned-files-break-host-operations-eacces--eperm--read-only) to the user with the real path, wait for the keyword `continue` before retrying. Never `sudo`, `chmod`, or loop. Short summary in [../AGENTS.md](../AGENTS.md#filesystem-permission-failures).
 
 ---
 
 ## Pointers
 
-- Project-wide rules & phase lifecycle — [../AGENTS.md](../AGENTS.md), [../CLAUDE.md](../CLAUDE.md)
+- Project-wide rules & phase lifecycle — [../AGENTS.md](../AGENTS.md)
 - Strategic brief — [../docs/SPEC.md](../docs/SPEC.md)
 - Current contract version — [../docs/CONTEXT.md](../docs/CONTEXT.md)
 - Frontend style guide — [../frontend/README.md](../frontend/README.md)

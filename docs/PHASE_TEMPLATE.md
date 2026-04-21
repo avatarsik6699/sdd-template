@@ -30,12 +30,8 @@
 ### Frontend
 - [ ] [task]
 
-### Tests
-- [ ] `uv run pytest tests/ -v` — all pass
-- [ ] `cd frontend && pnpm vitest run` — all pass
-- [ ] `cd frontend && pnpm exec tsc --noEmit` — 0 errors
-- [ ] `cd frontend && pnpm test:e2e` — all pass (requires full Docker stack up)
-- [ ] At least one Playwright spec covers each user-facing flow introduced in this phase
+<!-- Test execution is governed by `## Gate Checks` below + docs/STACK.md § Gate Commands.
+     Do not duplicate that list here. -->
 
 ---
 
@@ -56,68 +52,53 @@
 > This section is the source of truth for `/context-update`. Fill it in **before** handing to AI.
 
 ### New DB tables / columns
+
+None
+<!-- Replace with:
 ~~~
 table_name(col TYPE NOT NULL, ...)
 ~~~
-None
+when this phase introduces any. -->
 
 ### New API endpoints
+
+None
+<!-- Replace with a table when this phase introduces any:
 | Method | Path | Auth | Response |
 |--------|------|------|----------|
 | `GET` | `/api/v1/[path]` | JWT | `{"field": type}` |
-
-None
+-->
 
 ### New TypeScript types / Pinia stores
-```typescript
-// [TypeName] — describe what it represents
-```
+
 None
+<!-- Replace with typed code fences when this phase introduces any. -->
 
 ### New env vars (add to `.env.example`)
+
+None
+<!-- Replace with a table when this phase introduces any:
 | Key | Example value | Required |
 |-----|---------------|----------|
 | `VAR_NAME` | `value` | yes |
+-->
 
-None
 
 ---
 
 ## Gate Checks
 
-Run `/phase-gate [XX]` before committing.
+Run `/phase-gate [XX]` before committing. The exact commands live in [`docs/STACK.md § Gate Commands`](STACK.md#gate-commands); the workflow dispatches to them.
 
 `/phase-gate` returns full PASS only when:
-- Automated checks are green
+- Every row in the Gate Commands table exits green
 - All architect review items below are resolved (checked off)
 
-```bash
-# 1. Infrastructure
-docker compose up -d db redis
-docker compose ps  # db + redis must show: healthy
+Phase-specific smoke target (if any):
 
-# 2. Migrations
-DATABASE_URL=postgresql+asyncpg://app_user:changeme@localhost:5432/myapp \
-  uv run alembic upgrade head
-
-# 3. Backend tests
-uv run pytest tests/ -v
-
-# 4. Smoke test
-curl -s http://localhost:8000/api/v1/[your-endpoint]
+```
+# Example: curl -s http://localhost:8000/api/v1/[your-endpoint]
 # expected: [describe expected response]
-
-# 5. Frontend unit + type check
-cd frontend
-pnpm exec tsc --noEmit
-pnpm vitest run
-
-# 6. E2E (Playwright) — requires full stack healthy:
-#    db, redis, backend, frontend, nginx
-docker compose up -d            # if not already running
-docker compose ps               # verify all five services are healthy
-pnpm test:e2e                   # parses test-results/junit.xml
-# Report lives at frontend/playwright-report/index.html
 ```
 
 ---

@@ -38,23 +38,4 @@ retrieval:
 
 # context-update
 
-Canonical portable playbook: `docs/workflows/context-update.md`
-
-Use this skill after a phase has been completed and the docs need to catch up.
-
-Workflow:
-
-1. Read `docs/PHASE_XX.md`, `docs/CONTEXT.md`, `docs/STATE.md`, and `docs/CHANGELOG.md`.
-2. Confirm the phase is actually ready to be finalized.
-3. Extract the Contracts section from the phase file.
-4. Determine whether the change is additive, breaking, or docs-only.
-5. Update `docs/CONTEXT.md` surgically.
-6. Add a `docs/CHANGELOG.md` entry when the contract version changes.
-7. Mark the phase done in `docs/STATE.md`.
-8. Report the version bump decision and next step.
-
-Rules:
-
-- Never remove existing historical context entries unless the source of truth explicitly requires it.
-- Only append to contract arrays when the change is additive.
-- Do not commit.
+Execute the canonical playbook in [docs/workflows/context-update.md](../../../../docs/workflows/context-update.md). That file is the source of truth for the version-bump rules and the final report format.

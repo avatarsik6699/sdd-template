@@ -1,41 +1,102 @@
-# Phase Gate
+# phase-gate — Canonical Playbook
 
-Purpose: run the validation checks for the current phase and produce an honest PASS or FAIL report that includes unresolved architect review notes.
+Run the validation checks for the current phase and produce an honest PASS / FAIL report that includes unresolved architect review notes.
 
-Inputs:
+This document is the single source of truth for the `phase-gate` workflow. Runtime wrappers point here.
 
-- target phase number, or infer it from `docs/STATE.md`
+**Stack coupling:** the concrete commands for each check live in [docs/STACK.md → Gate Commands](../STACK.md#gate-commands). This workflow is stack-agnostic — it describes *what* is checked and *how results are reported*, not *which* tool runs each check. Derived projects swapping stacks rewrite STACK.md only.
 
-Required reads:
+## Input
 
-- `docs/PHASE_XX.md`
-- optionally `docs/STATE.md` if no phase number was given
+- Target phase number, or infer it from `docs/STATE.md` (the phase with status `🔄 in-progress`).
 
-Procedure:
+## Required reads
 
-1. Identify the target phase file.
-2. Read the phase file's Gate Checks section.
-3. Read the phase file's `Architect Review Notes` section and count unchecked items.
-4. Verify infrastructure with `docker compose ps`.
-5. Ensure `db` and `redis` are up and healthy. If needed, run `docker compose up -d db redis`.
-6. Run backend tests.
-7. Run `pnpm nuxt prepare` so `.nuxt/` types exist for frontend checks.
-8. Run frontend type checks.
-9. Run frontend unit tests.
-10. Run Playwright e2e only if the full app stack is already up.
-11. Run the smoke test from the phase file, or the default health check if none is specified.
-12. Produce a table report with one row per check, include the architect review status, and return overall PASS only if automated checks are green and there are no unchecked architect review items.
+- `docs/PHASE_XX.md` — Gate Checks and Architect Review Notes sections
+- `docs/STACK.md` — Gate Commands section (dispatch table)
+- Optionally `docs/STATE.md` if no phase number was given
 
-Rules:
+## Procedure
 
-- do not edit files
-- do not commit
-- do not stop at the first failure; show the full picture
-- do not auto-start the full app stack just to make Playwright look green
-- do not treat unchecked architect review notes as informational; they block PASS until resolved
+### 1. Identify the target phase
 
-Done when:
+- If a phase number was provided, read `docs/PHASE_[XX].md`.
+- Otherwise read `docs/STATE.md` and find the `🔄 in-progress` row.
+- If neither resolves, ask: "Which phase number should I check? (e.g. /phase-gate 01)"
 
-- every required check has a reported status
-- the output clearly says PASS or FAIL
-- any unchecked architect review notes are listed explicitly in the report
+### 2. Gather per-phase expectations
+
+From the phase file:
+
+- **Gate Checks** — note any phase-specific smoke URL, expected response, or extra commands beyond the standard set.
+- **Architect Review Notes** — collect every unchecked checklist item. Each unchecked item blocks PASS until resolved and checked off.
+
+### 3. Load the dispatch table
+
+From `docs/STACK.md → Gate Commands`, read the seven rows:
+
+1. Infrastructure
+2. Backend tests
+3. Type generation
+4. Frontend typecheck
+5. Frontend unit
+6. E2E
+7. Smoke
+
+Each row specifies the command, preconditions, and pass signal for that check.
+
+### 4. Execute checks
+
+Run each row in order. Record status (`✅` or `❌`) and a one-line detail (counts, error summary, etc.). Do **not** stop at the first failure — run every row so the full picture is visible to the architect.
+
+Special handling:
+
+- **Infrastructure**: if `db` / `redis` are not healthy, run the start command from the dispatch row, wait up to 30 seconds for healthy status, then record accordingly. If they never become healthy, mark ❌ and continue with later checks that do not depend on them.
+- **E2E**: check preconditions *before* running. If the full app stack is not up, record ❌ for the e2e row with the note `stack not up — run docker compose up -d and re-run /phase-gate` and skip the Playwright command entirely. **Do not auto-start the stack** — silent auto-starts mask drift.
+- **Smoke**: if the phase file specifies a smoke URL or expected response, use that; otherwise use the default from the dispatch row.
+
+### 5. Evaluate architect review notes
+
+Count unchecked items under the phase file's `Architect Review Notes` section. Any unchecked item → the Architect Review row is ❌ regardless of automated check status.
+
+### 6. Produce the report
+
+Output in this exact format:
+
+```
+## Phase Gate Report — PHASE_[XX]
+
+| Check              | Status | Details                                     |
+|--------------------|--------|---------------------------------------------|
+| Infrastructure     | ✅/❌  |                                             |
+| Backend tests      | ✅/❌  | N passed, M failed                          |
+| Type generation    | ✅/❌  |                                             |
+| Frontend typecheck | ✅/❌  | N errors                                    |
+| Frontend unit      | ✅/❌  | N passed, M failed                          |
+| E2E                | ✅/❌  | N passed, M failed — report: [path]         |
+| Smoke              | ✅/❌  | HTTP NNN                                    |
+| Architect review   | ✅/❌  | no open items / N unchecked                 |
+
+**Overall: ✅ PASS / ❌ FAIL**
+```
+
+If Architect Review is ❌, list each unchecked item verbatim under an `Open architect review notes` heading.
+
+On **PASS**: confirm it is safe to commit with the atomic commit message from the phase file.
+
+On **FAIL**: list each failed check with specific error output. Also list unchecked architect review notes if any remain. Do NOT suggest committing. Suggest fixes where obvious.
+
+## Rules
+
+- Do not edit any code files — this workflow is read-only.
+- Do not commit.
+- Do not run destructive commands (e.g. `docker compose down`).
+- Do not stop at the first failure — run every check.
+- Do not auto-start the full app stack just to make the e2e check pass.
+- Do not return PASS while any architect review checklist item remains unchecked.
+
+## Done when
+
+- Every required check has a reported status.
+- The output clearly says PASS or FAIL.
+- Any unchecked architect review notes are listed explicitly in the report.

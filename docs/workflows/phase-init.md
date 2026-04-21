@@ -1,41 +1,106 @@
-# Phase Init
+# phase-init — Canonical Playbook
 
-Purpose: scaffold a new `docs/PHASE_XX.md` from `docs/PHASE_TEMPLATE.md` using `docs/SPEC.md`, and append the phase row to `docs/STATE.md`.
+Scaffold a new `docs/PHASE_XX.md` from `docs/PHASE_TEMPLATE.md` using `docs/SPEC.md`, and append the phase row to `docs/STATE.md`.
 
-Inputs:
+This document is the single source of truth for the `phase-init` workflow. Runtime wrappers (`.claude/skills/phase-init/SKILL.md`, `plugins/sdd-workflow/skills/phase-init/SKILL.md`, `plugins/sdd-workflow/commands/phase-init.md`) point here.
 
-- target phase number
+## Input
 
-Required reads:
+- Target phase number (e.g. `02`).
+
+## Required reads
 
 - `docs/PHASE_TEMPLATE.md`
-- `docs/CONTEXT.md`
-- `docs/STATE.md`
-- `docs/SPEC.md`
+- `docs/CONTEXT.md` — note current `_meta.version` and `phase_completed`
+- `docs/STATE.md` — find the previous phase status
+- `docs/SPEC.md` — read all sections, especially §3 (data model), §4 (API/backend), §5 (frontend), §6 (infra), §8 (phases plan)
 
-Procedure:
+## Procedure
 
-1. Normalize the phase number to two digits.
-2. If `docs/PHASE_XX.md` already exists, ask before overwriting.
-3. Confirm the previous phase is complete, unless creating `PHASE_01`.
-4. Extract from `docs/SPEC.md`:
-   - phase title and scope from the phase plan
-   - new DB tables for this phase
-   - new API endpoints for this phase
-   - new types and stores implied by the data model and frontend sections
-   - file list for backend, frontend, and infra
-   - environment variables introduced for the first time
-5. Create `docs/PHASE_XX.md` from the template and fill scope, files, contracts, and atomic commit message.
-6. Append a `PHASE_XX` row to the phase status table in `docs/STATE.md`.
+### 1. Validate input
 
-Rules:
+- If no phase number was provided, ask: "Which phase number? e.g. /phase-init 02".
+- Normalize to two digits: `2` → `02`, `10` → `10`.
+- If `docs/PHASE_XX.md` already exists, warn and wait for confirmation before overwriting.
 
-- never modify `docs/SPEC.md`
-- never modify `docs/CONTEXT.md`
-- make best-effort extractions instead of leaving whole sections blank
-- use `[TODO: verify]` only when a specific detail is genuinely absent
+### 2. Confirm previous phase is complete
 
-Done when:
+Look up `PHASE_[XX-1]` in `docs/STATE.md`:
 
-- `docs/PHASE_XX.md` exists and is filled from `docs/SPEC.md`
-- `docs/STATE.md` contains the new pending row
+- `✅ done` → proceed.
+- Anything else → warn: "PHASE_[XX-1] is not marked done (status: [status]). Starting the next phase before completing the previous one may cause context drift. Proceed anyway?" Wait for confirmation.
+- Creating `PHASE_01` (no predecessor) → skip this check.
+
+### 3. Extract scope and contracts from `docs/SPEC.md`
+
+**Scope** (from §8): phase title and all scope items.
+
+**New DB tables / columns** (from §3): tables first introduced in this phase, matched against the scope description. Paste verbatim blocks. Do not include tables that already existed.
+
+**New API endpoints** (from §4.2): endpoint rows belonging to this phase. Include the full row — method, path, auth, description.
+
+**New TypeScript types and stores** (from §3 + §5): derive types from new tables (map snake_case → camelCase; UUID → `string`; TIMESTAMPTZ → `string`; omit `hashed_password` and other sensitive columns from response types). From §5.2 identify stores first set up in this phase.
+
+**Files** (from §4.1 + §5.1 + §5.2 + §6): explicit list of files to be created or modified, grouped as backend, frontend, infrastructure.
+
+**Env vars**: env vars introduced for the first time in this phase, mapped to example values and required/optional.
+
+If a section yields nothing for this phase, write `None` — never leave a subsection blank or as a generic TODO.
+
+### 4. Create `docs/PHASE_XX.md`
+
+Copy `docs/PHASE_TEMPLATE.md` and substitute placeholders:
+
+| Placeholder | Value |
+|-------------|-------|
+| `[XX]` | Zero-padded phase number |
+| `[Phase Title]` | From SPEC.md §8 |
+| `v0.[XX].0` | Tag |
+| `PHASE_[XX-1]` | Previous phase |
+| `[VERSION]` | Current `_meta.version` from `docs/CONTEXT.md` |
+| Scope checkboxes | Items from §8 as `- [ ] [item]` |
+| Files | Explicit list from step 3 |
+| Contracts | Extracted sections from step 3 |
+| Atomic Commit Message | `feat(phase-[XX]): [phase title lowercased] — [2–4 key deliverables]`, under 72 chars |
+
+Use `[TODO: verify]` only for details genuinely absent from SPEC.md (e.g. a smoke-test response body example). Do not invent data.
+
+### 5. Append the phase row to `docs/STATE.md`
+
+Add to the Phase Status table:
+
+```
+| PHASE_[XX] | ⏳ pending | v0.[XX].0 | ⬜ | - | [Phase Title] |
+```
+
+### 6. Report
+
+```
+## phase-init complete
+
+Created: docs/PHASE_[XX].md
+STATE.md: PHASE_[XX] row added (⏳ pending)
+
+Contracts filled from SPEC.md:
+- DB tables: [list or "none"]
+- Endpoints: [count] rows
+- TS types: [list or "none"]
+- Stores: [list or "none"]
+- Env vars: [count]
+- Files: [count]
+
+Before handing to the implementing agent, verify any remaining [TODO: verify] markers and the Gate Checks smoke-test expected response.
+
+CONTEXT.md version at time of init: [version]
+```
+
+## Rules
+
+- Never modify `docs/SPEC.md` or `docs/CONTEXT.md`.
+- Extract contracts from SPEC.md — do not invent or leave blank.
+- Do not commit.
+
+## Done when
+
+- `docs/PHASE_XX.md` exists and is filled from `docs/SPEC.md`.
+- `docs/STATE.md` contains the new pending row.
