@@ -45,8 +45,8 @@ async function handleLogin() {
         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
         <input
           id="email"
-          data-testid="email-input"
           v-model="email"
+          data-testid="email-input"
           type="email"
           autocomplete="email"
           placeholder="admin@example.com"
@@ -59,8 +59,8 @@ async function handleLogin() {
         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
         <input
           id="password"
-          data-testid="password-input"
           v-model="password"
+          data-testid="password-input"
           type="password"
           autocomplete="current-password"
           placeholder="••••••••"

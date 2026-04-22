@@ -11,24 +11,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Template Placeholder Guard ────────────────────────────────────────────
-  # Fails fast if scripts/init-project.sh was never run (template tokens still
-  # present in source). Prevents silent breakage of the other jobs.
+  # ── Template Marker Guard ─────────────────────────────────────────────────
+  # This repository is a scaffold template, so marker tokens are expected.
+  # Fail only if required markers disappear from canonical template files.
   placeholder-guard:
-    name: Template Placeholders
+    name: Template Markers
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fail on unreplaced template tokens
-        # The bracket-class escapes (e.g. [P]ROJECT_NAME, my[a]pp_test) make the
-        # regex match the real placeholders without matching this file itself.
+      - name: Ensure required template markers still exist
         run: |
-          if grep -rnE '\[[P]ROJECT_NAME\]|\[[P]ROJECT_DESCRIPTION\]|[m]y-project-(backend|frontend):ci|\bmy[a]pp_test\b' \
-               app/ frontend/app/ frontend/nuxt.config.ts docs/ 2>/dev/null; then
-            echo "::error::Template placeholders detected — run scripts/init-project.sh before pushing."
-            exit 1
-          fi
+          grep -q '\[PROJECT_NAME\]' app/main.py
+          grep -q '\[PROJECT_DESCRIPTION\]' app/main.py
+          grep -q '\[PROJECT_NAME\]' frontend/app/pages/login.vue
+          grep -q '\[PROJECT_NAME\]' frontend/app/pages/dashboard.vue
+          grep -q '\[PROJECT_NAME\]' frontend/app/widgets/sidebar/ui/sidebar-nav.vue
+          grep -q '\[PROJECT_NAME\]' docs/SPEC.md
+          grep -q '\[PROJECT_NAME\]' docs/STATE.md
 
   # ── Backend Lint ──────────────────────────────────────────────────────────
   lint-backend:

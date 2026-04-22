@@ -6,7 +6,7 @@ type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch';
 
 // Helper to extract response type from openapi-typescript schema
 export type ExtractResponse<Path extends keyof paths, Method extends HttpMethod> =
-  paths[Path] extends Record<Method, any>
+  paths[Path] extends Record<Method, unknown>
     ? paths[Path][Method] extends {
         responses: { 200: { content: { 'application/json': infer Res } } };
       }
@@ -21,7 +21,7 @@ export type ExtractResponse<Path extends keyof paths, Method extends HttpMethod>
 
 // Helper to extract body type from openapi-typescript schema
 export type ExtractBody<Path extends keyof paths, Method extends HttpMethod> =
-  paths[Path] extends Record<Method, any>
+  paths[Path] extends Record<Method, unknown>
     ? paths[Path][Method] extends { requestBody: { content: { 'application/json': infer Body } } }
       ? Body
       : paths[Path][Method] extends {
@@ -33,7 +33,7 @@ export type ExtractBody<Path extends keyof paths, Method extends HttpMethod> =
 
 // Helper to extract query type from openapi-typescript schema
 export type ExtractQuery<Path extends keyof paths, Method extends HttpMethod> =
-  paths[Path] extends Record<Method, any>
+  paths[Path] extends Record<Method, unknown>
     ? paths[Path][Method] extends { parameters: { query?: infer Query } }
       ? Query
       : undefined

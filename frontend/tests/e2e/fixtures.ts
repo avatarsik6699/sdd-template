@@ -9,7 +9,7 @@ type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
-  uniqueEmail: async ({}, use, testInfo) => {
+  uniqueEmail: async (_fixtures, use, testInfo) => {
     const slug = `${testInfo.workerIndex}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await use(`e2e-${slug}@example.com`);
   },
