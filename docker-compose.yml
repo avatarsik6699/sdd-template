@@ -9,12 +9,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_user} -d ${POSTGRES_DB:-myapp}"]
+      # Probe server readiness only; checking a specific DB can flap during
+      # initdb on cold CI runners before POSTGRES_DB creation completes.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_user} || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 20
-      # GitHub runners can take longer on cold starts; avoid marking DB unhealthy too early.
-      start_period: 30s
+      retries: 30
+      # GitHub-hosted runners can be slow on first boot after image pulls.
+      start_period: 60s
 
   redis:
     image: redis:8-alpine

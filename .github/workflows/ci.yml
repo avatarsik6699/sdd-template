@@ -203,7 +203,17 @@ jobs:
         run: echo "E2E_T_BUILD_DONE=$(date +%s)" >> "$GITHUB_ENV"
 
       - name: Start full Docker stack (CI mode, no rebuild)
-        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-build
+        run: |
+          set -euo pipefail
+          if ! docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-build; then
+            echo "::group::docker compose ps"
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml ps || true
+            echo "::endgroup::"
+            echo "::group::db logs"
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color db || true
+            echo "::endgroup::"
+            exit 1
+          fi
 
       - name: Wait for healthy stack and warm endpoints
         run: |
