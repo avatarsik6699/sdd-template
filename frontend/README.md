@@ -152,8 +152,14 @@ docker-compose up -d
 # Install browsers (first time only)
 pnpm test:e2e:install
 
-# Run headlessly
-pnpm test:e2e
+# Enforce anti-flake rules before committing
+pnpm test:e2e:lint
+
+# Deterministic gate path (Chromium only)
+pnpm test:e2e --project=chromium
+
+# Optional exploratory cross-browser run
+pnpm test:e2e:all
 
 # Run with UI runner (debugging)
 pnpm test:e2e:ui
@@ -165,8 +171,10 @@ Default base URL: `http://localhost:3000`. Override with `PLAYWRIGHT_BASE_URL`.
 
 - Use `data-testid` attributes for elements that tests interact with
 - Prefer kebab-case IDs: `submit-button`, `email-input`, `user-list`
-- Use semantic Playwright locators (`getByRole`, `getByLabel`) when text is stable
+- Prefer semantic Playwright locators (`getByRole`, `getByLabel`) when text is stable
+- Use web-first assertions (`await expect(locator)...`) to wait for readiness
 - Avoid relying on CSS classes in test selectors
+- Do not use `waitForTimeout` in committed tests (debug-only, never part of final assertions)
 
 ### E2E expectations (gate requirement)
 
@@ -174,9 +182,21 @@ The `/phase-gate` skill requires a ✅ e2e row before commit — unit tests alon
 
 - **One spec per user-facing flow** introduced in the phase. Specs live under [tests/e2e/](tests/e2e/).
 - **Run against the full Docker stack** — `db`, `redis`, `backend`, `frontend`, `nginx` must all be healthy. The gate skill will refuse to run Playwright otherwise; it does NOT auto-start the stack.
+- **Chromium is the canonical pass/fail browser** for gate + PR CI. Firefox/WebKit are optional exploratory coverage.
 - **Reporter config** is pinned in [playwright.config.ts](playwright.config.ts) to emit three outputs: `list` (CLI), `html` (clickable report), and `junit` at `test-results/junit.xml` (parsed by the gate skill).
+- **Auth setup pattern** is required for non-login flows: use setup-generated `storageState` and keep login UX checks explicit.
+- **Test data must be deterministic**: unique per worker/test and never dependent on run order or leftovers.
 - **Debugging a failure**: open `playwright-report/index.html`, or run with the inspector: `pnpm test:e2e:ui`.
 - **Test IDs are kebab-case** to match the `testIdAttribute: 'data-testid'` config.
+
+### E2E troubleshooting
+
+- Startup failures: check `docker compose ps` and health first.
+- Health-check drift: verify backend/frontend endpoints are reachable before running Playwright.
+- Base URL mismatch: set `PLAYWRIGHT_BASE_URL` to the actual frontend entrypoint.
+- Auth-state corruption: delete `tests/e2e/.auth/` and rerun.
+- Hydration race on login-like forms: tests must wait for app readiness (template sets `html[data-app-ready="true"]` after Nuxt suspense/page-finish hooks).
+- Artifact-first triage: inspect HTML report, JUnit, and traces before altering assertions.
 
 ---
 

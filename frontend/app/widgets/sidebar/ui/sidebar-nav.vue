@@ -68,12 +68,13 @@ const isDark = computed({
 
       <!-- User section -->
       <div v-if="authStore.user" class="mb-2">
-        <p class="text-xs text-gray-500 truncate">{{ authStore.user.email }}</p>
+        <p data-testid="user-email" class="text-xs text-gray-500 truncate">{{ authStore.user.email }}</p>
         <UBadge size="xs" variant="subtle" class="mt-1">
           {{ authStore.user.role }}
         </UBadge>
       </div>
       <UButton
+        data-testid="logout-button"
         color="error"
         variant="ghost"
         block

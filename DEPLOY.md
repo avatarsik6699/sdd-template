@@ -150,8 +150,8 @@ rm docker-compose.override.yml
 ```
 
 Скрипт автоматически:
-- генерирует `SECRET_KEY`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`
-- выставляет `APP_ENV=production`, `NUXT_PUBLIC_API_BASE`, `CORS_ORIGINS`
+- генерирует `SECRET_KEY`, `POSTGRES_PASSWORD`
+- выставляет `APP_ENV=production`, `API_BASE_URL`, `API_BASE_INTERNAL_URL`, `CORS_ORIGINS`
 - заменяет `[DOMAIN]` в `nginx.conf`
 - удаляет `docker-compose.override.yml`
 
@@ -169,9 +169,6 @@ nano .env
 POSTGRES_PASSWORD=<вывод openssl rand -hex 32>
 DATABASE_URL=postgresql+asyncpg://app_user:<пароль>@db:5432/myapp
 
-# Redis
-REDIS_PASSWORD=<вывод openssl rand -hex 16>
-
 # Auth
 SECRET_KEY=<вывод python3 -c "import secrets; print(secrets.token_hex(32))">
 
@@ -181,9 +178,12 @@ APP_ENV=production
 # Домен
 DOMAIN=ваш-домен.ru
 
-# URL API для браузерного клиента Nuxt (без /api — иначе дублирование в запросах)
-# Nuxt автоматически маппит NUXT_PUBLIC_* → runtimeConfig.public.*
-NUXT_PUBLIC_API_BASE=https://ваш-домен.ru
+# URL API для браузера (обязательно с префиксом /api/v1 —
+# иначе код, добавляющий его вручную, сгенерирует /api/api/v1/...).
+API_BASE_URL=https://ваш-домен.ru/api/v1
+
+# URL API для SSR внутри Docker-сети
+API_BASE_INTERNAL_URL=http://backend:8000/api/v1
 
 # CORS — разрешить только ваш домен
 CORS_ORIGINS=["https://ваш-домен.ru","https://www.ваш-домен.ru"]
@@ -496,12 +496,12 @@ docker compose restart backend
 
 ### Nuxt: API-запросы в браузере падают (Network Error / 404)
 
-**Причина:** `NUXT_PUBLIC_API_BASE` указывает на `localhost` (dev-значение из `.env.example`).
+**Причина:** `API_BASE_URL` указывает на `localhost` (dev-значение из `.env.example`).
 
 **Решение:**
 ```bash
-# В .env на сервере (без /api — иначе запросы уходят на /api/api/...):
-NUXT_PUBLIC_API_BASE=https://ваш-домен.ru
+# В .env на сервере — префикс /api/v1 обязателен:
+API_BASE_URL=https://ваш-домен.ru/api/v1
 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend
 ```

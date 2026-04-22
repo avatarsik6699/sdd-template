@@ -73,7 +73,7 @@ Affected phases are marked `⚠️ NEEDS_REVIEW` in `docs/STATE.md` until resolv
 |---------|-------------|
 | `/spec-sync [description]` | Immediately after editing [docs/SPEC.md](docs/SPEC.md) |
 | `/phase-init [N]` | To scaffold the next [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) from SPEC |
-| `/phase-gate [N]` | Before committing — runs automated checks and also fails if `Architect Review Notes` still contain unchecked items |
+| `/phase-gate [N]` | Before committing — runs automated checks (including deterministic Playwright Chromium E2E) and also fails if `Architect Review Notes` still contain unchecked items |
 | `/context-update [N]` | After the gate passes — bumps `CONTEXT.md` version, updates `STATE.md` and `CHANGELOG.md` |
 
 Skill definitions live under [.claude/skills/](.claude/skills/).
@@ -93,6 +93,7 @@ Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.m
 | [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) | What exactly should the AI implement this iteration? |
 | [docs/STACK.md](docs/STACK.md) | Stack-specific setup, testing, layout, and conventions |
 | [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md) | Context7, MCP, and cross-agent setup guidance |
+| [docs/E2E_PIPELINE_CHECKLIST.md](docs/E2E_PIPELINE_CHECKLIST.md) | Required E2E CI/branch-protection contract for derived projects |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Short ADR-style technical decisions worth remembering |
 | [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md) | Repeated pitfalls, symptoms, and shortest safe fixes |
 | [docs/workflows/README.md](docs/workflows/README.md) | Portable workflow playbooks for phase-init, gate, sync, and context update |
@@ -119,6 +120,8 @@ Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.m
 5. Run `/phase-gate N` again only after the fixes are in place.
 
 Adding unchecked architect review notes by itself does not complete the loop. Those notes mean the phase is still open. The phase is only ready to commit when the fixes are done, the automated checks are green, and there are no unchecked architect review items left.
+
+For derived repositories, set branch protection so the CI job `E2E (Chromium)` is required before merge, and apply the rollout checklist in [docs/E2E_PIPELINE_CHECKLIST.md](docs/E2E_PIPELINE_CHECKLIST.md).
 
 ---
 

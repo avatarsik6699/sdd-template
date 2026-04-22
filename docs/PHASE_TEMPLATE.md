@@ -88,17 +88,30 @@ None
 
 ## Gate Checks
 
-Run `/phase-gate [XX]` before committing. The exact commands live in [`docs/STACK.md § Gate Commands`](STACK.md#gate-commands); the workflow dispatches to them.
+Run `/phase-gate [XX]` before committing.
 
 `/phase-gate` returns full PASS only when:
-- Every row in the Gate Commands table exits green
+- Automated checks are green
 - All architect review items below are resolved (checked off)
 
-Phase-specific smoke target (if any):
+Use the commands in [docs/STACK.md](./STACK.md#gate-commands) as the source of truth for:
+- infrastructure/bootstrap
+- migrations
+- backend tests
+- frontend prep and typecheck
+- frontend unit tests
+- e2e (deterministic Chromium for gate + PR CI)
+- the default smoke check
 
-```
-# Example: curl -s http://localhost:8000/api/v1/[your-endpoint]
+If this phase needs a custom smoke target or other phase-specific note, record it here:
+
+```bash
+# Optional phase-specific smoke override
+curl -s http://localhost:8000/api/v1/[your-endpoint]
 # expected: [describe expected response]
+
+# Optional helper for the reference stack
+./scripts/phase-gate.sh [XX]
 ```
 
 ---

@@ -45,6 +45,7 @@ async function handleLogin() {
         <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
         <input
           id="email"
+          data-testid="email-input"
           v-model="email"
           type="email"
           autocomplete="email"
@@ -58,6 +59,7 @@ async function handleLogin() {
         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
         <input
           id="password"
+          data-testid="password-input"
           v-model="password"
           type="password"
           autocomplete="current-password"
@@ -67,9 +69,10 @@ async function handleLogin() {
         />
       </div>
 
-      <p v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</p>
+      <p v-if="errorMsg" data-testid="login-error" class="text-sm text-red-600">{{ errorMsg }}</p>
 
       <button
+        data-testid="login-submit"
         type="submit"
         :disabled="authStore.isLoading"
         class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50"

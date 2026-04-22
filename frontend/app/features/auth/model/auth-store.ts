@@ -15,6 +15,7 @@ export interface AuthUser {
 }
 
 interface AuthState {
+  accessToken: string | null;
   user: AuthUser | null;
   isLoading: boolean;
   error: string | null;
@@ -22,21 +23,20 @@ interface AuthState {
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
+    accessToken: null,
     user: null,
     isLoading: false,
     error: null,
   }),
 
   getters: {
-    isAuthenticated: (): boolean =>
-      !!safeCookie.getItem<string>({ keyWithVersion: AUTH_COOKIE_CONFIG }),
-    token: (): string | undefined =>
-      safeCookie.getItem<string>({ keyWithVersion: AUTH_COOKIE_CONFIG }),
+    isAuthenticated: (state): boolean => !!state.accessToken,
+    token: (state): string | undefined => state.accessToken ?? undefined,
   },
 
   actions: {
     loadFromStorage() {
-      // Cookies are automatically loaded, nothing to do here
+      this.accessToken = safeCookie.getItem<string>({ keyWithVersion: AUTH_COOKIE_CONFIG }) ?? null;
     },
 
     async login(email: string, password: string): Promise<void> {
@@ -57,6 +57,7 @@ export const useAuthStore = defineStore('auth', {
           }
         );
 
+        this.accessToken = data.access_token;
         safeCookie.setItem({
           keyWithVersion: AUTH_COOKIE_CONFIG,
           value: data.access_token,
@@ -76,10 +77,14 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async fetchMe(): Promise<void> {
-      if (!this.isAuthenticated) return;
+      if (!this.accessToken) return;
       try {
         const { $api } = useNuxtApp();
-        const data = await $api<AuthUser>('/api/v1/auth/me');
+        const data = await $api<AuthUser>('/api/v1/auth/me', {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+          },
+        });
         this.user = data;
       } catch {
         // Token expired or invalid — clear auth
@@ -88,6 +93,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     logout() {
+      this.accessToken = null;
       this.user = null;
       this.error = null;
       safeCookie.removeItem({ keyWithVersion: AUTH_COOKIE_CONFIG });

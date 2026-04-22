@@ -85,7 +85,6 @@ command -v python3 &>/dev/null || die "python3 is required to generate secrets."
 
 SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
-REDIS_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
 
 # ── banner ────────────────────────────────────────────────────────────────────
 
@@ -99,17 +98,22 @@ echo ""
 
 # ── create .env ───────────────────────────────────────────────────────────────
 
+# Pin the derived project's DB name into .env.example so it stays consistent
+# for anything downstream (setup-prod.sh on the VPS reads POSTGRES_DB from here).
+sedi "s|myapp|$DB_NAME|g" .env.example
+
 cp .env.example .env
 
-# Replace DB name (handles both POSTGRES_DB=myapp and myapp in DATABASE_URL)
+# DB name — both POSTGRES_DB and DATABASE_URL already replaced in .env.example,
+# so this runs on any stragglers introduced later in this script.
 sedi "s|myapp|$DB_NAME|g" .env
-# Replace passwords — order matters: more specific patterns first
-sedi "s|changeme_redis|$REDIS_PASSWORD|g" .env
-sedi "s|changeme|$DB_PASSWORD|g" .env
-sedi "s|CHANGE_ME_generate_a_secure_random_hex_string|$SECRET_KEY|g" .env
-# Replace domain placeholders
+# Line-anchored replacements on the KEY (stable across .env.example edits).
+sedi "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$DB_PASSWORD|" .env
+sedi "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://app_user:$DB_PASSWORD@db:5432/$DB_NAME|" .env
+sedi "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" .env
+# Domain placeholders (commented production lines).
 sedi "s|\[DOMAIN\]|$DOMAIN|g" .env
-# Replace project name comment
+# Project name comment header.
 sedi "s|# \[PROJECT_NAME\]|# $PROJECT_DISPLAY|g" .env
 
 echo "  ✓ .env created"
@@ -138,21 +142,46 @@ fi
 
 # ── app/main.py ───────────────────────────────────────────────────────────────
 
-sedi "s|title=\"\[PROJECT_NAME\]\"|title=\"$PROJECT_DISPLAY\"|g" app/main.py
-sedi "s|\[PROJECT_DESCRIPTION\]||g" app/main.py
+sedi 's|title="\[PROJECT_NAME\]"|title="'"$PROJECT_DISPLAY"'"|' app/main.py
+sedi 's|description="\[PROJECT_DESCRIPTION\]"|description="'"$PROJECT_DISPLAY"' backend"|' app/main.py
 echo "  ✓ app/main.py"
 
 # ── frontend ──────────────────────────────────────────────────────────────────
 
-sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" frontend/app/layouts/default.vue
-sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" frontend/app/pages/dashboard.vue
-sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" frontend/app/pages/login.vue
+# Replace [PROJECT_NAME] in any Vue template under the frontend app (covers
+# pages, layouts, widgets — so new components added to the template don't
+# silently leak the placeholder).
+while IFS= read -r -d '' file; do
+  sedi "s|\[PROJECT_NAME\]|$PROJECT_DISPLAY|g" "$file"
+done < <(find frontend/app -type f -name '*.vue' -print0)
 echo "  ✓ frontend/"
 
 # ── nginx/nginx.conf ──────────────────────────────────────────────────────────
 
 sedi "s|\[DOMAIN\]|$DOMAIN|g" nginx/nginx.conf
 echo "  ✓ nginx/nginx.conf"
+
+# ── docker-compose.yml ────────────────────────────────────────────────────────
+# Replace the myapp fallback so `docker compose config` doesn't surface it.
+
+sedi "s|:-myapp}|:-$DB_NAME}|g" docker-compose.yml
+echo "  ✓ docker-compose.yml"
+
+# ── dev-default DB name in backend ───────────────────────────────────────────
+# app/core/config.py and alembic/env.py ship a localhost fallback URL containing
+# "myapp". These fallbacks only fire when DATABASE_URL is unset, but replace
+# them so new projects don't carry the template's name.
+
+sedi "s|localhost:5432/myapp|localhost:5432/$DB_NAME|g" app/core/config.py
+sedi "s|localhost:5432/myapp|localhost:5432/$DB_NAME|g" alembic/env.py
+echo "  ✓ app/core/config.py, alembic/env.py"
+
+# ── DEPLOY.md example DB name ─────────────────────────────────────────────────
+# DEPLOY.md uses "myapp" in example pg_dump / psql commands. Replace to match
+# the derived project's actual DB name.
+
+sedi "s|myapp|$DB_NAME|g" DEPLOY.md
+echo "  ✓ DEPLOY.md"
 
 # ── .github/workflows/ci.yml ─────────────────────────────────────────────────
 
@@ -189,6 +218,22 @@ echo "  ✓ CLAUDE.md"
 if [[ "$ADMIN_EMAIL" != "admin@example.com" ]]; then
   sedi "s|admin@example\.com|$ADMIN_EMAIL|g" alembic/versions/0001_users_table.py
   echo "  ✓ alembic/versions/0001_users_table.py (admin: $ADMIN_EMAIL)"
+fi
+
+# ── leftover-placeholder safety check ────────────────────────────────────────
+# Surface any unreplaced template tokens so they can be cleaned up before commit.
+
+leftovers=$(grep -rnE '\[PROJECT_NAME\]|\[PROJECT_DESCRIPTION\]|my-project|\bmyapp\b' \
+  --include='*.py' --include='*.ts' --include='*.vue' --include='*.md' \
+  --include='*.yml' --include='*.yaml' --include='*.toml' \
+  --exclude-dir=tmp --exclude-dir=human-instructions \
+  --exclude-dir=.venv --exclude-dir=node_modules --exclude-dir=.git \
+  . 2>/dev/null || true)
+
+if [[ -n "$leftovers" ]]; then
+  echo ""
+  echo "⚠  Unreplaced template placeholders detected — review before proceeding:"
+  echo "$leftovers" | sed 's/^/    /'
 fi
 
 # ── done ─────────────────────────────────────────────────────────────────────

@@ -17,9 +17,8 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme_redis}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme_redis}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -49,6 +48,11 @@ services:
       dockerfile: ../Dockerfile.frontend
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Nuxt reads NUXT_* from the container environment (env_file alone does not
+      # wire runtimeConfig correctly). Source them from the user-facing names in .env.
+      NUXT_API_BASE_INTERNAL: ${API_BASE_INTERNAL_URL:-http://backend:8000/api/v1}
+      NUXT_PUBLIC_API_BASE: ${API_BASE_URL:-http://localhost:8000/api/v1}
     depends_on:
       - backend
     healthcheck:

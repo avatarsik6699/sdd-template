@@ -55,6 +55,10 @@ cd "$ROOT_DIR"
 [[ -f .env.example ]] || die ".env.example not found. Make sure you are in the project root."
 command -v python3 &>/dev/null || die "python3 is required to generate secrets."
 
+# Derive the DB name from POSTGRES_DB in .env.example (already set by init-project.sh).
+DB_NAME="$(grep -E '^POSTGRES_DB=' .env.example | head -n1 | cut -d= -f2 | tr -d '[:space:]')"
+[[ -n "$DB_NAME" ]] || die "Could not determine POSTGRES_DB from .env.example. Run scripts/init-project.sh first."
+
 # ── idempotency guard ─────────────────────────────────────────────────────────
 
 if [[ -f .env ]]; then
@@ -67,7 +71,6 @@ fi
 
 SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
-REDIS_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
 
 # ── banner ────────────────────────────────────────────────────────────────────
 
@@ -75,24 +78,26 @@ echo ""
 echo "Configuring production environment"
 echo "  Domain: $DOMAIN"
 echo "  Admin:  $ADMIN_EMAIL"
+echo "  DB:     $DB_NAME"
 echo ""
 
 # ── create .env ───────────────────────────────────────────────────────────────
 
 cp .env.example .env
 
-# Replace secrets (order matters: more specific pattern first)
-sedi "s|changeme_redis|$REDIS_PASSWORD|g" .env
-sedi "s|changeme|$DB_PASSWORD|g" .env
-sedi "s|CHANGE_ME_generate_a_secure_random_hex_string|$SECRET_KEY|g" .env
+# Line-anchored replacements: operate on the KEY, not on literal sentinel values.
+# This keeps setup-prod.sh stable as .env.example evolves.
+sedi "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$DB_PASSWORD|" .env
+sedi "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://app_user:$DB_PASSWORD@db:5432/$DB_NAME|" .env
+sedi "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" .env
 
-# Replace domain placeholder
+# Replace domain placeholder in commented/production lines.
 sedi "s|\[DOMAIN\]|$DOMAIN|g" .env
 
-# Production-specific values
+# Production-specific values.
 sedi "s|^APP_ENV=.*|APP_ENV=production|" .env
-sedi "s|^NUXT_PUBLIC_API_BASE=.*|NUXT_PUBLIC_API_BASE=https://$DOMAIN|" .env
-# Note: no /api suffix — adding it causes double-prefix (/api/api/...) in browser requests
+sedi "s|^API_BASE_URL=.*|API_BASE_URL=https://$DOMAIN/api/v1|" .env
+sedi "s|^API_BASE_INTERNAL_URL=.*|API_BASE_INTERNAL_URL=http://backend:8000/api/v1|" .env
 sedi 's|^CORS_ORIGINS=.*|CORS_ORIGINS=["https://'"$DOMAIN"'","https://www.'"$DOMAIN"'"]|' .env
 
 echo "  ✓ .env created"
@@ -118,7 +123,6 @@ echo "Done. Production .env is ready."
 echo ""
 echo "Generated secrets (shown once — already saved to .env):"
 echo "  POSTGRES_PASSWORD: $DB_PASSWORD"
-echo "  REDIS_PASSWORD:    $REDIS_PASSWORD"
 echo "  SECRET_KEY:        $SECRET_KEY"
 echo ""
 echo "Next steps:"

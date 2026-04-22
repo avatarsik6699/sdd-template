@@ -49,8 +49,17 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // SSR-only value. NUXT_API_BASE_INTERNAL is set by docker-compose from
+    // API_BASE_INTERNAL_URL; the fallbacks cover bare-metal dev runs.
+    apiBaseInternal:
+      process.env.NUXT_API_BASE_INTERNAL ??
+      process.env.API_BASE_INTERNAL_URL ??
+      process.env.API_BASE_URL ??
+      'http://localhost:8000/api/v1',
     public: {
-      apiBase: process.env.API_BASE_URL ?? 'http://localhost:8000',
+      // Browser-facing value. NUXT_PUBLIC_API_BASE is set by docker-compose
+      // from API_BASE_URL; must include the /api/v1 prefix.
+      apiBase: process.env.API_BASE_URL ?? 'http://localhost:8000/api/v1',
     },
   },
 });

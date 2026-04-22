@@ -6,7 +6,30 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ── Template Placeholder Guard ────────────────────────────────────────────
+  # Fails fast if scripts/init-project.sh was never run (template tokens still
+  # present in source). Prevents silent breakage of the other jobs.
+  placeholder-guard:
+    name: Template Placeholders
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail on unreplaced template tokens
+        # The bracket-class escapes (e.g. [P]ROJECT_NAME, my[a]pp_test) make the
+        # regex match the real placeholders without matching this file itself.
+        run: |
+          if grep -rnE '\[[P]ROJECT_NAME\]|\[[P]ROJECT_DESCRIPTION\]|[m]y-project-(backend|frontend):ci|\bmy[a]pp_test\b' \
+               app/ frontend/app/ frontend/nuxt.config.ts docs/ 2>/dev/null; then
+            echo "::error::Template placeholders detected — run scripts/init-project.sh before pushing."
+            exit 1
+          fi
+
   # ── Backend Lint ──────────────────────────────────────────────────────────
   lint-backend:
     name: Backend Lint
@@ -107,11 +130,213 @@ jobs:
         working-directory: frontend
         run: pnpm vitest run
 
+  # ── Frontend E2E (Required on PR) ─────────────────────────────────────────
+  e2e:
+    name: E2E (Chromium)
+    runs-on: ubuntu-latest
+    needs: [test-backend, frontend]
+    env:
+      COMPOSE_PROJECT_NAME: e2e-ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mark timing start
+        run: echo "E2E_T0=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.33.0"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Prepare project environment
+        run: cp .env.example .env
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Mark frontend install complete
+        run: echo "E2E_T_INSTALL_DONE=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Enforce E2E anti-flake policy
+        working-directory: frontend
+        run: pnpm test:e2e:lint
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Mark browser install complete
+        run: echo "E2E_T_BROWSER_DONE=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build backend image (Buildx + GHA cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          load: true
+          tags: e2e-ci-backend:latest
+          cache-from: type=gha,scope=e2e-backend
+          cache-to: type=gha,mode=max,scope=e2e-backend,ignore-error=true
+
+      - name: Build frontend image (Buildx + GHA cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./Dockerfile.frontend
+          load: true
+          tags: e2e-ci-frontend:latest
+          cache-from: type=gha,scope=e2e-frontend
+          cache-to: type=gha,mode=max,scope=e2e-frontend,ignore-error=true
+
+      - name: Mark image build complete
+        run: echo "E2E_T_BUILD_DONE=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Start full Docker stack (CI mode, no rebuild)
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-build
+
+      - name: Wait for healthy stack and warm endpoints
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import time
+          import urllib.request
+
+          required = {
+              "db": "healthy",
+              "redis": "healthy",
+              "backend": "healthy",
+              "frontend": "healthy",
+              "nginx": "running",
+          }
+
+          deadline = time.time() + 180
+          while time.time() < deadline:
+              proc = subprocess.run(
+                  ["docker", "compose", "ps", "--format", "json"],
+                  capture_output=True,
+                  text=True,
+              )
+              if proc.returncode != 0:
+                  time.sleep(2)
+                  continue
+
+              services = {}
+              for line in proc.stdout.splitlines():
+                  if line.strip():
+                      item = json.loads(line)
+                      services[item["Service"]] = item
+
+              ready = True
+              for service, expected in required.items():
+                  item = services.get(service)
+                  if not item:
+                      ready = False
+                      break
+                  if expected == "healthy":
+                      if (item.get("Health") or "").lower() != "healthy":
+                          ready = False
+                          break
+                  else:
+                      if (item.get("State") or "").lower() != "running":
+                          ready = False
+                          break
+
+              if not ready:
+                  time.sleep(2)
+                  continue
+
+              try:
+                  urllib.request.urlopen("http://localhost:3000/login", timeout=5)
+                  urllib.request.urlopen("http://localhost:8000/api/v1/health", timeout=5)
+                  print("Stack is healthy and warm.")
+                  raise SystemExit(0)
+              except Exception:
+                  time.sleep(2)
+
+          raise SystemExit("Timed out waiting for stack readiness.")
+          PY
+
+      - name: Mark stack ready
+        run: echo "E2E_T_STACK_READY=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Run Alembic migrations inside backend container
+        run: docker compose exec -T backend uv run alembic upgrade head
+
+      - name: Mark migrations complete
+        run: echo "E2E_T_MIGRATIONS_DONE=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Run Playwright E2E (Chromium gate)
+        working-directory: frontend
+        env:
+          CI: "1"
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+        run: |
+          start="$(date +%s)"
+          echo "E2E_T_TEST_START=$start" >> "$GITHUB_ENV"
+          set +e
+          pnpm test:e2e --project=chromium
+          status="$?"
+          end="$(date +%s)"
+          echo "E2E_T_TEST_DONE=$end" >> "$GITHUB_ENV"
+          exit "$status"
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: warn
+
+      - name: E2E timing summary
+        if: always()
+        shell: bash
+        run: |
+          now="$(date +%s)"
+          t0="${E2E_T0:-$now}"
+          t_install="${E2E_T_INSTALL_DONE:-$now}"
+          t_browser="${E2E_T_BROWSER_DONE:-$now}"
+          t_build="${E2E_T_BUILD_DONE:-$now}"
+          t_ready="${E2E_T_STACK_READY:-$now}"
+          t_migrate="${E2E_T_MIGRATIONS_DONE:-$now}"
+          t_test_start="${E2E_T_TEST_START:-$now}"
+          t_test_done="${E2E_T_TEST_DONE:-$now}"
+          echo "E2E timing summary (seconds):"
+          echo "  Frontend install:        $((t_install - t0))"
+          echo "  Browser install:         $((t_browser - t_install))"
+          echo "  Buildx image build:      $((t_build - t_browser))"
+          echo "  Stack readiness:         $((t_ready - t_build))"
+          echo "  Migrations:              $((t_migrate - t_ready))"
+          echo "  Playwright tests:        $((t_test_done - t_test_start))"
+          echo "  Total e2e job elapsed:   $((t_test_done - t0))"
+
+      - name: Show docker compose status
+        if: always()
+        run: docker compose ps
+
+      - name: Stop docker compose stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down --volumes
+
   # ── Docker Build ──────────────────────────────────────────────────────────
   build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [lint-backend, test-backend, frontend]
+    needs: [lint-backend, test-backend, frontend, e2e]
     steps:
       - uses: actions/checkout@v4
 

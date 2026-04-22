@@ -89,22 +89,21 @@ Change these in [alembic/versions/0001_users_table.py](../alembic/versions/0001_
 
 ## Gate Commands
 
-The `/phase-gate` workflow (see [docs/workflows/phase-gate.md](workflows/phase-gate.md)) dispatches to these stack-specific commands. **When swapping stacks, rewrite this section; the gate workflow itself is stack-agnostic.**
+This section is the authoritative command source for the phase-gate workflow. If the stack changes, update this table and keep the workflow wrappers untouched.
 
-| # | Check | Command | Required services / preconditions | Pass signal |
-|---|-------|---------|-----------------------------------|-------------|
-| 1 | Infrastructure | `docker compose ps` | `db`, `redis` healthy (run `docker compose up -d db redis` first if needed) | Both containers report `healthy` |
-| 2 | Backend tests | `uv run pytest tests/ -v` | none beyond step 1 | 0 failed, 0 errored |
-| 3 | Type generation | `cd frontend && pnpm nuxt prepare` | none | `.nuxt/` exists and command exits 0 |
-| 4 | Frontend typecheck | `cd frontend && pnpm typecheck` | step 3 succeeded | 0 errors |
-| 5 | Frontend unit | `cd frontend && pnpm test` | step 3 succeeded | 0 failed |
-| 6 | E2E (Playwright) | `cd frontend && pnpm test:e2e` | full stack healthy: `db`, `redis`, `backend`, `frontend`, `nginx`. Do NOT auto-start from the gate. | `frontend/test-results/junit.xml` shows 0 failed; HTML report at `frontend/playwright-report/index.html` |
-| 7 | Smoke | `curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/health` (or the phase-file override) | backend running | HTTP 200 |
+| Gate check | Command | Preconditions / notes |
+|------------|---------|-----------------------|
+| Infrastructure / bootstrap | `docker compose up -d` then `docker compose ps` | Use the repository `.env`. `db`, `redis`, `backend`, and `frontend` must be healthy; `nginx` must be running. |
+| Migrations | `docker compose exec -T backend uv run alembic upgrade head` | Run inside the backend container so `.env`-backed credentials stay aligned. |
+| Backend tests | `uv run pytest tests/ -v` | Run from the repo root. |
+| Frontend type generation / prep | `cd frontend && pnpm nuxt prepare` | Required before frontend type-checks and Vitest when `.nuxt/` is missing or stale. |
+| Frontend typecheck | `cd frontend && pnpm typecheck` | Depends on the prep step above. |
+| Frontend unit tests | `cd frontend && pnpm test` | Depends on the prep step above. |
+| E2E anti-flake lint | `cd frontend && pnpm test:e2e:lint` | Fails on committed `waitForTimeout(...)` usage in E2E specs. Debug-only waits must never be committed. |
+| E2E (deterministic gate) | `cd frontend && pnpm test:e2e --project=chromium` | Run against the full Docker stack. Chromium is the only pass/fail browser for gate + PR CI. JUnit output should land at `frontend/test-results/junit.xml`; HTML report at `frontend/playwright-report/index.html`. |
+| Smoke test | `curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/v1/health` | Phase files may override the endpoint and expected result with a phase-specific smoke target. |
 
-Notes:
-
-- If a phase file's Gate Checks section lists a phase-specific smoke URL or extra commands, use those in addition to the baseline above.
-- The e2e row is the only check with a hard precondition beyond step 1. If `db`, `redis`, `backend`, `frontend`, or `nginx` is missing or unhealthy, the gate must record e2e ❌ with the note `stack not up — run docker compose up -d and re-run`, and skip Playwright (do not auto-start).
+`./scripts/phase-gate.sh [XX]` is the preferred helper for this reference stack. It is an implementation of these gate commands, not a separate source of truth.
 
 ## Testing
 
@@ -138,13 +137,39 @@ E2E runs against the full Docker stack.
 ```bash
 cd frontend
 pnpm test:e2e:install   # first time only — downloads browsers
-pnpm test:e2e           # runs against the running stack
+pnpm test:e2e:lint      # anti-flake policy check
+pnpm test:e2e --project=chromium  # deterministic gate path
+pnpm test:e2e:all                 # optional exploratory cross-browser run
 ```
 
 Reports:
 - CLI: `list` reporter (inline)
 - HTML: `frontend/playwright-report/index.html`
 - JUnit: `frontend/test-results/junit.xml` (parsed by `/phase-gate`)
+- Traces: stored in `frontend/test-results/` for failed retries (`trace: on-first-retry`)
+
+Determinism rules:
+- Prefer `getByRole`, `getByLabel`, and `getByTestId` selectors.
+- Use Playwright web-first assertions (`await expect(...)`) for readiness; do not use fixed sleeps.
+- Use deterministic setup/fixtures with unique per-test data; never depend on leftovers from previous runs.
+- Keep login behavior tests explicit, and use setup-storage state for post-auth flows.
+- Add at least one E2E spec for each user-facing flow introduced in a phase.
+
+### CI and branch protection
+
+- CI includes a dedicated required job: `E2E (Chromium)` on pull requests.
+- Configure branch protection in derived repositories so this job is required before merge.
+- Keep the `CI` workflow as the single required PR path for Playwright in derived repositories (no duplicate standalone Playwright workflow unless intentionally non-gating).
+- Use [E2E Pipeline Checklist](./E2E_PIPELINE_CHECKLIST.md) when setting up branch protection and pull-request templates.
+
+### E2E troubleshooting
+
+- Startup failures: inspect `docker compose ps` first; do not run Playwright until all services are healthy.
+- Health-check drift: if `frontend` or `backend` checks fail, verify exposed ports and container health commands.
+- Base URL mismatch: set `PLAYWRIGHT_BASE_URL` if running outside the default Docker URL.
+- Auth-state corruption: delete `frontend/tests/e2e/.auth/` and rerun setup.
+- Hydration race on SSR pages: fixture helpers should wait for app readiness (`html[data-app-ready="true"]`) before typing/clicking form controls.
+- Artifact-first triage: inspect `frontend/playwright-report/index.html`, JUnit, and traces before changing assertions.
 
 Full testing guidelines, including `data-testid` conventions and per-flow spec requirements, live in [../frontend/README.md](../frontend/README.md#testing).
 

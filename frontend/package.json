@@ -17,6 +17,9 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:all": "playwright test --project=chromium --project=firefox --project=webkit",
+    "test:e2e:lint": "node scripts/check-e2e-anti-flake.mjs",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install --with-deps",
     "typecheck": "vue-tsc --build --noEmit"

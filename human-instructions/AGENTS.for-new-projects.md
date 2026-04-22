@@ -14,7 +14,7 @@
 4. **Atomic Commits**: `feat|fix|chore|docs|test|refactor(scope): description`. One commit = one logical task.
 5. **Security**: No hardcoded secrets. Use `.env`, environment variables, and typed settings (e.g. Pydantic Settings).
 6. **Context Sync**: After each phase completes, run the `context-update` workflow to refresh `docs/CONTEXT.md`, `docs/STATE.md`, and `docs/CHANGELOG.md`.
-7. **E2E First**: For every user-facing feature touched in a phase, add or update a Playwright spec under `frontend/tests/e2e/`. Unit tests alone do not clear the gate.
+7. **E2E First**: For every user-facing feature touched in a phase, add or update a Playwright spec under `frontend/tests/e2e/`. Chromium is the canonical pass/fail browser for phase gates and PR CI in the reference stack.
 8. **Output Discipline**: First the plan → wait for architect `✅` → code → tests → commit. Do not skip steps.
 
 ## Stack Conventions
@@ -70,6 +70,21 @@ Post the exact handoff message from [docs/KNOWN_GOTCHAS.md § Docker-owned files
    ```bash
    git tag -a v0.N.0 -m "Phase N: [title]"
    ```
+
+## Playwright Determinism Rules
+
+1. Prefer `getByRole`, `getByLabel`, and `getByTestId` selectors over CSS selectors.
+2. Use Playwright web-first assertions (`await expect(...)`) for readiness and state transitions.
+3. Do not use `waitForTimeout` in committed tests except temporary local debugging.
+4. Keep login-flow tests explicit; use setup-generated `storageState` for post-auth scenarios.
+5. Ensure test data is deterministic: unique per worker/test and independent from previous runs.
+6. For the reference stack gate and PR CI, run:
+   ```bash
+   pnpm test:e2e:lint
+   pnpm test:e2e --project=chromium
+   ```
+   Cross-browser runs are optional and non-gating unless the project explicitly tightens policy.
+7. Keep branch protection aligned with [docs/E2E_PIPELINE_CHECKLIST.md](../docs/E2E_PIPELINE_CHECKLIST.md), including required check name `E2E (Chromium)` from the `CI` workflow.
 
 ## Spec Change Sync Protocol
 

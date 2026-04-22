@@ -41,7 +41,9 @@ const getItem = <T>(args: {
 
   try {
     const cookie = useCookie<SafeCookieTypes.DataWithVersion<unknown> | null>(keyWithVersion.key);
-    const parsed = cookie.value;
+    const raw = cookie.value;
+    const parsed =
+      typeof raw === 'string' ? (JSON.parse(raw) as SafeCookieTypes.DataWithVersion<unknown>) : raw;
 
     if (!parsed) {
       return undefined;
