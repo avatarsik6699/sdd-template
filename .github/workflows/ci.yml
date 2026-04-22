@@ -208,84 +208,52 @@ jobs:
       - name: Start full Docker stack (CI mode, no rebuild)
         run: |
           set -euo pipefail
-          if ! docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-build; then
+          if ! docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --no-build --wait --wait-timeout 420; then
             echo "::group::docker compose ps"
             docker compose -f docker-compose.yml -f docker-compose.ci.yml ps || true
             echo "::endgroup::"
             echo "::group::db logs"
             docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color db || true
             echo "::endgroup::"
+            echo "::group::backend logs"
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color backend || true
+            echo "::endgroup::"
+            echo "::group::frontend logs"
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color frontend || true
+            echo "::endgroup::"
             exit 1
           fi
 
-      - name: Wait for healthy stack and warm endpoints
+      - name: Warm frontend and backend endpoints
         run: |
-          python3 - <<'PY'
-          import json
-          import subprocess
-          import time
-          import urllib.request
+          set -euo pipefail
+          deadline=$((SECONDS + 120))
+          while (( SECONDS < deadline )); do
+            if curl -fsS http://localhost:3000/login >/dev/null && \
+               curl -fsS http://localhost:8000/api/v1/health >/dev/null; then
+              echo "Stack is healthy and warm."
+              exit 0
+            fi
+            echo "Waiting for warm endpoints (${SECONDS}s elapsed)..."
+            sleep 2
+          done
 
-          required = {
-              "db": "healthy",
-              "redis": "healthy",
-              "backend": "healthy",
-              "frontend": "healthy",
-              "nginx": "running",
-          }
-
-          deadline = time.time() + 180
-          while time.time() < deadline:
-              proc = subprocess.run(
-                  ["docker", "compose", "ps", "--format", "json"],
-                  capture_output=True,
-                  text=True,
-              )
-              if proc.returncode != 0:
-                  time.sleep(2)
-                  continue
-
-              services = {}
-              for line in proc.stdout.splitlines():
-                  if line.strip():
-                      item = json.loads(line)
-                      services[item["Service"]] = item
-
-              ready = True
-              for service, expected in required.items():
-                  item = services.get(service)
-                  if not item:
-                      ready = False
-                      break
-                  if expected == "healthy":
-                      if (item.get("Health") or "").lower() != "healthy":
-                          ready = False
-                          break
-                  else:
-                      if (item.get("State") or "").lower() != "running":
-                          ready = False
-                          break
-
-              if not ready:
-                  time.sleep(2)
-                  continue
-
-              try:
-                  urllib.request.urlopen("http://localhost:3000/login", timeout=5)
-                  urllib.request.urlopen("http://localhost:8000/api/v1/health", timeout=5)
-                  print("Stack is healthy and warm.")
-                  raise SystemExit(0)
-              except Exception:
-                  time.sleep(2)
-
-          raise SystemExit("Timed out waiting for stack readiness.")
-          PY
+          echo "::group::docker compose ps"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps || true
+          echo "::endgroup::"
+          echo "::group::backend logs"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color backend || true
+          echo "::endgroup::"
+          echo "::group::frontend logs"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color frontend || true
+          echo "::endgroup::"
+          exit 1
 
       - name: Mark stack ready
         run: echo "E2E_T_STACK_READY=$(date +%s)" >> "$GITHUB_ENV"
 
       - name: Run Alembic migrations inside backend container
-        run: docker compose exec -T backend uv run alembic upgrade head
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T backend uv run alembic upgrade head
 
       - name: Mark migrations complete
         run: echo "E2E_T_MIGRATIONS_DONE=$(date +%s)" >> "$GITHUB_ENV"
@@ -339,7 +307,7 @@ jobs:
 
       - name: Show docker compose status
         if: always()
-        run: docker compose ps
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
 
       - name: Stop docker compose stack
         if: always()
