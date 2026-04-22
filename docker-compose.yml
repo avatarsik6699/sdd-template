@@ -12,7 +12,9 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_user} -d ${POSTGRES_DB:-myapp}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      # GitHub runners can take longer on cold starts; avoid marking DB unhealthy too early.
+      start_period: 30s
 
   redis:
     image: redis:8-alpine
