@@ -202,6 +202,9 @@ jobs:
       - name: Mark image build complete
         run: echo "E2E_T_BUILD_DONE=$(date +%s)" >> "$GITHUB_ENV"
 
+      - name: Reset any previous compose state
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down --volumes --remove-orphans || true
+
       - name: Start full Docker stack (CI mode, no rebuild)
         run: |
           set -euo pipefail

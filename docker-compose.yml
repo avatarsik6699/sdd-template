@@ -7,11 +7,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_DB: ${POSTGRES_DB:-myapp}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18+ expects the parent directory to be mounted.
+      - pgdata:/var/lib/postgresql
     healthcheck:
       # Probe server readiness only; checking a specific DB can flap during
       # initdb on cold CI runners before POSTGRES_DB creation completes.
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_user} || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_user} -d postgres || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
