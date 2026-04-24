@@ -41,6 +41,7 @@ IGNORE_NAMES = {
     "dist",
     "build",
     "dev",
+    "settings.local.json",
 }
 
 METADATA_SCHEMA_VERSION = "0.1"

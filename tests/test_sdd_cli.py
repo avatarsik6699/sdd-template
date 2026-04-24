@@ -397,6 +397,33 @@ def test_init_writes_metadata_and_managed_files(tmp_path: Path) -> None:
     assert installed_manifest["source_dir"] == "."
 
 
+def test_init_ignores_local_claude_settings_from_template_source(monkeypatch, tmp_path: Path) -> None:
+    repo = make_minimal_template_repo(tmp_path)
+    source_dir = repo / "templates" / "demo-template" / "source"
+    (source_dir / ".claude" / "skills").mkdir(parents=True)
+    (source_dir / ".claude" / "settings.local.json").write_text('{"permissions": {"allow": []}}\n', encoding="utf-8")
+    monkeypatch.chdir(repo)
+
+    target = tmp_path / "generated-project"
+    result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "demo-template",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert not (target / ".claude" / "settings.local.json").exists()
+
+    lock_payload = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert ".claude/settings.local.json" not in lock_payload["template"]["baseline_hashes"]
+
+
 def test_init_applies_template_bootstrap_replacements_by_default(tmp_path: Path) -> None:
     target = tmp_path / "generated-project"
 
@@ -1215,8 +1242,9 @@ def test_upgrade_apply_uses_released_artifact_source(tmp_path: Path, monkeypatch
     assert "pending_version" not in lock_payload["template"]
 
 
-def test_upgrade_check_fails_without_release_artifacts(tmp_path: Path) -> None:
+def test_upgrade_check_fails_without_release_artifacts(tmp_path: Path, monkeypatch) -> None:
     target = tmp_path / "generated-project"
+    monkeypatch.setattr(cli_main, "release_tags_for_prefix", lambda prefix: [])
 
     init_result = runner.invoke(
         app,

@@ -1245,6 +1245,7 @@ Post-plan hardening log:
 
 - 2026-04-24: completed first scoped follow-up by hardening release-archive extraction in `extract_git_tree` (`tarfile.extractall(..., filter="data")`) and adding regression coverage in `tests/test_sdd_cli.py`
 - 2026-04-24: hardened `sdd release validate` scope behavior with regression tests proving template-scope validation can continue without a resolvable workflow package version (warning path), while `all`/`workflow` scopes still fail fast when workflow version resolution is required
+- 2026-04-24: hardened generated-project metadata integrity by excluding local-only `.claude/settings.local.json` from template materialization/hash baselines and adding regression coverage so `sdd upgrade` remains deterministic after real component tags are present
 
 ---
 
