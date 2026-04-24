@@ -13,6 +13,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application source
 COPY app/ ./app/
+COPY workflow/ ./workflow/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
