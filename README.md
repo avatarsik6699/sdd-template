@@ -1,28 +1,21 @@
 # SDD Template
 
-A template repository for building software projects with a strict Spec-Driven Development (SDD) workflow.
+A template repository for building software projects with a Spec-Driven Development (SDD) workflow.
 
-This repo is not an application. It is a product factory made of:
+This repo is a project factory, not an application. It contains:
 
-- `workflow/` — reusable SDD workflow assets (playbooks, project-file templates, CLI glue).
-- `templates/<template-id>/` — stack-specific project snapshots.
-- `sdd` CLI — project initialization, maintenance, and upgrade tooling.
-
-## What You Get
-
-Generated projects come with:
-
-- a phased delivery workflow (`spec-init` -> `phase-init` -> gate -> context update)
-- agent guardrails (`AGENTS.md`, `CLAUDE.md`)
-- stack runtime source code (backend, frontend, infra files)
-- upgrade metadata for safe managed-file updates
+- `workflow/` — reusable SDD workflow assets (playbooks, project-file templates, CLI glue)
+- `templates/<template-id>/` — stack-specific project snapshots
+- `sdd` CLI — project initialization, maintenance, and upgrade tooling
 
 Available templates:
 
 - [FastAPI + Nuxt](templates/fastapi-nuxt/README.md)
 - [FastAPI + React Router SSR](templates/fastapi-react-router/README.md)
 
-## Quick Start
+---
+
+## Step 1 — Create a project from the template
 
 ```bash
 uv run sdd init --template fastapi-react-router --project-name my-project ./my-project
@@ -31,78 +24,107 @@ cd my-project
 docker compose up --build
 ```
 
-Then follow the generated project's stack guide:
+This generates a full project with a phased delivery workflow, agent guardrails, and stack source code. From here on, all SDD work happens **inside the generated project**.
 
-- `docs/STACK.md` (setup, commands, conventions)
-- `DEPLOY.md` (production rollout)
+Generated project references:
 
-## How To Work On A Generated Project
+- `docs/STACK.md` — setup, commands, conventions
+- `DEPLOY.md` — production rollout
 
-1. Run `/spec-init "project brief"` to draft and validate `docs/SPEC.md`.
-2. Run `/phase-init N` to scaffold the phase contract.
-3. Implement only what `docs/PHASE_NN.md` allows.
-4. Run `/phase-gate N` until all checks and review notes are resolved.
-5. Run `/context-update N` to sync `CONTEXT`, `STATE`, and `CHANGELOG`.
-6. Merge phase branch and continue with the next phase.
+---
 
-## Project Work Scheme
+## Step 2 — Write the spec
+
+```
+/spec-init "describe what you are building"
+```
+
+This drafts and validates `docs/SPEC.md` through a clarification dialogue. The spec defines the full product scope and is the contract all phases execute against. **Do not start implementation before the spec is approved.**
+
+If the spec needs to change after phases have started, run `/spec-sync "what changed"` to reconcile it with active phases before continuing.
+
+---
+
+## Step 3 — Scaffold a phase
+
+```
+/phase-init N
+```
+
+A phase is a time-boxed delivery unit. This command produces `docs/PHASE_NN.md`, which contains:
+
+- the exact scope for this phase (features, files, contracts)
+- acceptance criteria and test requirements
+- explicit list of what is **out of scope**
+
+Review `docs/PHASE_NN.md` before writing any code. Create a branch `feat/phase-N` for this phase's work.
+
+---
+
+## Step 4 — Implement inside phase scope
+
+Write code and tests. Stay inside the scope defined in `docs/PHASE_NN.md`. Do not implement anything not listed there — save it for a later phase.
+
+---
+
+## Step 5 — Run the quality gate
+
+```
+/phase-gate N
+```
+
+Runs automated checks (linting, tests, contract compliance) and produces a structured review. If anything fails:
+
+1. Fix the code or tests.
+2. Add a note to the `Architect Review Notes` section in `docs/PHASE_NN.md`.
+3. Re-run `/phase-gate N`.
+
+Repeat until the gate passes with all notes resolved.
+
+---
+
+## Step 6 — Finalize the phase
+
+```
+/context-update N
+```
+
+Syncs `CONTEXT.md`, `STATE.md`, and `CHANGELOG.md` with the completed phase. Then:
+
+```bash
+git commit -m "feat(phase-N): ..."
+# open PR: feat/phase-N -> develop, merge
+```
+
+Return to Step 3 for the next phase, or merge `develop` into `main` and tag a release when all phases are done.
+
+---
+
+## Full workflow at a glance
 
 ```mermaid
 flowchart TD
-    A["Architect provides project brief"] --> B["/spec-init 'project brief'/"]
-    B --> C["Draft+validate docs/SPEC.md with clarifications"]
-    C --> D["/phase-init N/"]
-    D --> E["Generate docs/PHASE_NN.md: scope, file plan, contracts"]
-    E --> F["Architect reviews phase contract and creates feat/phase-N branch"]
-    F --> G["AI implementation inside phase scope"]
-    G --> H["/phase-gate N/"]
-    H --> I{"Automated checks pass and Architect Review Notes resolved?"}
-    I -- No --> J["Fix code/tests/docs and update review notes"]
-    J --> H
-    I -- Yes --> K["git commit feat(phase-N): ..."]
-    K --> L["/context-update N/"]
-    L --> M["Open PR feat/phase-N to develop and merge"]
-    M --> N{"SPEC changed mid-phase?"}
-    N -- Yes --> O["/spec-sync 'change description'/"]
-    O --> D
-    N -- No --> P{"More phases?"}
-    P -- Yes --> D
-    P -- No --> Q["Release cycle: merge develop to main, publish release tags"]
+    A["Project brief"] --> B["/spec-init"]
+    B --> C["docs/SPEC.md approved"]
+    C --> D["/phase-init N\nbranch: feat/phase-N"]
+    D --> E["Implement inside phase scope"]
+    E --> F["/phase-gate N"]
+    F --> G{"Gate passes?"}
+    G -- No --> H["Fix + update review notes"]
+    H --> F
+    G -- Yes --> I["/context-update N\ngit commit + PR merge"]
+    I --> J{"More phases?"}
+    J -- Yes --> D
+    J -- No --> K["merge develop → main, tag release"]
+
+    C --> L{"SPEC changed mid-phase?"}
+    L -- Yes --> M["/spec-sync 'change description'"]
+    M --> D
 ```
 
-Stage-to-command map:
+---
 
-| Stage | Purpose | Command / action |
-|---|---|---|
-| Spec initialization | Build and validate the first complete specification | `/spec-init "description"` |
-| Spec definition | Refine approved product intent and boundaries | Edit `docs/SPEC.md` |
-| Phase scaffolding | Create scoped executable contract | `/phase-init N` |
-| Implementation | Deliver only approved scope | Code + tests in phase files |
-| Quality gate | Verify automated checks and unresolved notes | `/phase-gate N` |
-| Manual review loop | Capture/fix architect findings | Update `Architect Review Notes`, then re-run `/phase-gate N` |
-| Phase finalization | Persist contract updates | `/context-update N` |
-| Integration | Merge validated phase | PR `feat/phase-N` -> `develop` |
-| Spec drift handling | Resync active phases after SPEC edits | `/spec-sync "description"` |
-| Final release | Publish stable state | merge `develop` -> `main`, then tag/release |
-
-## Deployment
-
-Deployment is template-specific. Use the generated project's `DEPLOY.md` as the source of truth.
-
-Reference deployment guides in this template repo:
-
-- [Nuxt template deploy guide](templates/fastapi-nuxt/source/DEPLOY.md)
-- [React Router template deploy guide](templates/fastapi-react-router/source/DEPLOY.md)
-
-Typical production model:
-
-- Docker Compose (`docker-compose.yml` + `docker-compose.prod.yml`)
-- Nginx reverse proxy + TLS
-- Backend + frontend + Postgres + Redis containers
-
-## Operations (Run / Manage)
-
-Inside a generated project:
+## Operations (inside a generated project)
 
 ```bash
 # Start in background
@@ -124,11 +146,9 @@ docker compose exec backend pytest
 docker compose exec frontend pnpm test
 ```
 
-Use stack-local commands from the generated `docs/STACK.md` for full validation paths.
+---
 
-## Updating Existing Projects
-
-Use `sdd upgrade` from inside the generated project.
+## Updating an existing project
 
 ```bash
 # Preview managed updates
@@ -136,45 +156,44 @@ uv run sdd upgrade --check
 
 # Apply safe managed updates
 uv run sdd upgrade --apply
-
-# Preview against current workspace (maintainer/debug mode)
-uv run sdd upgrade --source workspace-current --check
 ```
 
-Useful inspection helpers:
+---
 
-```bash
-# Verify workflow/template composition state
-uv run sdd integrate --check
+## Deployment
 
-# Resolve active gate metadata and helper source
-uv run sdd gate resolve
-```
+Deployment is template-specific. Use the generated project's `DEPLOY.md` as the source of truth.
 
-## Maintainer Workflow (This Repository)
+Reference guides in this repo:
 
-When changing this template repository itself:
+- [Nuxt template deploy guide](templates/fastapi-nuxt/source/DEPLOY.md)
+- [React Router template deploy guide](templates/fastapi-react-router/source/DEPLOY.md)
+
+---
+
+## Maintainer workflow (this repository)
+
+When changing this template repo itself:
 
 ```bash
 # Validate a template structure
 uv run sdd release validate --scope template --template fastapi-nuxt --skip-tag-checks
 
-# Validate full release readiness (workflow + template)
+# Validate full release readiness
 uv run sdd release validate --scope all --skip-tag-checks
 
 # Inspect release coordinate status
 uv run sdd release status --template fastapi-nuxt
 ```
 
-Release process reference:
+References:
 
 - [docs/RELEASE.md](docs/RELEASE.md)
-
-Template authoring reference:
-
 - [docs/TEMPLATE_AUTHORING.md](docs/TEMPLATE_AUTHORING.md)
 
-## File Map
+---
+
+## File map
 
 - [workflow/docs/playbooks/README.md](workflow/docs/playbooks/README.md) — canonical workflow playbooks
 - [workflow/project-files/AGENTS.md.template](workflow/project-files/AGENTS.md.template) — guardrails shipped to projects
