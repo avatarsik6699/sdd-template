@@ -35,6 +35,7 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e:lint
 pnpm test:e2e --project=chromium
+pnpm playwright:cli -- open http://localhost:3000 --headed
 pnpm build
 pnpm start
 ```
@@ -45,3 +46,4 @@ pnpm start
 - Put document metadata in route-level `meta()` exports.
 - Use SSR-safe rendering only in route modules and `root.tsx`.
 - Prefer simple CSS in `app/styles/app.css`; this template does not depend on Tailwind.
+- Use Playwright CLI only for explicit manual debugging requests; keep gate automation on deterministic Playwright test commands.

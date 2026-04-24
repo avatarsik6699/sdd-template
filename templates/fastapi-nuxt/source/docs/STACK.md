@@ -147,6 +147,27 @@ pnpm test:e2e --project=chromium  # deterministic gate path
 pnpm test:e2e:all                 # optional exploratory cross-browser run
 ```
 
+### Manual browser investigation (Playwright CLI, opt-in)
+Use this only when you explicitly want interactive bug reproduction outside deterministic E2E gates.
+It is not part of `phase-gate`.
+
+```bash
+cd frontend
+
+# One-off interactive browser session (uses npx package execution)
+pnpm playwright:cli -- open http://localhost:3000 --headed
+
+# Inspect actionable elements from the current page
+pnpm playwright:cli -- snapshot
+
+# Save visual evidence while reproducing a bug
+pnpm playwright:cli -- screenshot
+```
+
+Notes:
+- Prefer deterministic `pnpm test:e2e --project=chromium` for pass/fail gating.
+- Use Playwright CLI to investigate issues tests missed, then convert findings into reproducible Playwright specs.
+
 Reports:
 - CLI: `list` reporter (inline)
 - HTML: `frontend/playwright-report/index.html`

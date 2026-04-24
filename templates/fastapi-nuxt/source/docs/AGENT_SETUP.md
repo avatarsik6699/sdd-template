@@ -83,6 +83,21 @@ Rules:
 - Do not send secrets in queries
 - If you hit quota or auth limits, run `npx ctx7@latest login` or set `CONTEXT7_API_KEY`
 
+## Playwright CLI (manual browser debugging)
+
+The frontend already ships with Playwright test tooling. This template also exposes a manual Playwright CLI launcher for interactive investigation:
+
+```bash
+cd frontend
+pnpm playwright:cli -- open http://localhost:3000 --headed
+```
+
+Rules:
+
+- Use it only when explicitly requested for manual bug reproduction/investigation
+- Keep it out of default gate automation (`phase-gate` still uses deterministic `playwright test`)
+- Convert validated manual findings into reproducible E2E specs where possible
+
 ## Portable Recommendation
 
 For multi-model projects:

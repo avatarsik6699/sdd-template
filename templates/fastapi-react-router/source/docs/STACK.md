@@ -80,6 +80,26 @@ pnpm build
 pnpm start
 ```
 
+## Manual browser investigation (Playwright CLI, opt-in)
+
+Use this only for explicit manual debugging requests when deterministic tests do not expose a browser issue.
+It is not part of default gate automation.
+
+```bash
+cd frontend
+
+# One-off interactive browser session
+pnpm playwright:cli -- open http://localhost:3000 --headed
+
+# Inspect elements available for interaction
+pnpm playwright:cli -- snapshot
+
+# Capture evidence while reproducing a bug
+pnpm playwright:cli -- screenshot
+```
+
+Prefer `pnpm test:e2e --project=chromium` for deterministic pass/fail checks, and convert manual findings into E2E specs when possible.
+
 React Router SSR is enabled in `frontend/react-router.config.ts`. Route modules use `meta()`
 exports for document title and SEO metadata.
 

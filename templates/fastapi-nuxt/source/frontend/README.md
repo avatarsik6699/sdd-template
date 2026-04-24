@@ -163,6 +163,9 @@ pnpm test:e2e:all
 
 # Run with UI runner (debugging)
 pnpm test:e2e:ui
+
+# Manual interactive browser debugging (opt-in)
+pnpm playwright:cli -- open http://localhost:3000 --headed
 ```
 
 Default base URL: `http://localhost:3000`. Override with `PLAYWRIGHT_BASE_URL`.
@@ -187,6 +190,7 @@ The `/phase-gate` skill requires a ✅ e2e row before commit — unit tests alon
 - **Auth setup pattern** is required for non-login flows: use setup-generated `storageState` and keep login UX checks explicit.
 - **Test data must be deterministic**: unique per worker/test and never dependent on run order or leftovers.
 - **Debugging a failure**: open `playwright-report/index.html`, or run with the inspector: `pnpm test:e2e:ui`.
+- **Manual browser investigation**: only when explicitly requested, run Playwright CLI commands (`pnpm playwright:cli -- ...`) to inspect a live page and capture evidence.
 - **Test IDs are kebab-case** to match the `testIdAttribute: 'data-testid'` config.
 
 ### E2E troubleshooting
