@@ -49,18 +49,38 @@ Then follow the generated project's stack guide:
 
 ```mermaid
 flowchart TD
-    A[Define intent in docs/SPEC.md] --> B[/phase-init N/]
-    B --> C[Phase contract: docs/PHASE_NN.md]
-    C --> D[Implementation + tests]
-    D --> E[/phase-gate N/]
-    E --> F{Gate green and review notes resolved?}
-    F -- No --> D
-    F -- Yes --> G[/context-update N/]
-    G --> H[Merge phase branch]
-    H --> I{More phases?}
-    I -- Yes --> B
-    I -- No --> J[Release]
+    A[Architect defines product intent in docs/SPEC.md] --> B[/phase-init N/]
+    B --> C[Generate docs/PHASE_NN.md: scope, file plan, contracts]
+    C --> D[Architect reviews phase contract and creates feat/phase-N branch]
+    D --> E[AI implementation inside phase scope]
+    E --> F[/phase-gate N/]
+    F --> G{Automated checks pass and Architect Review Notes resolved?}
+    G -- No --> H[Fix code/tests/docs and update review notes]
+    H --> F
+    G -- Yes --> I[git commit feat(phase-N): ...]
+    I --> J[/context-update N/]
+    J --> K[Open PR feat/phase-N -> develop and merge]
+    K --> L{SPEC changed mid-phase?}
+    L -- Yes --> M[/spec-sync \"change description\"/]
+    M --> B
+    L -- No --> N{More phases?}
+    N -- Yes --> B
+    N -- No --> O[Release cycle: merge develop -> main, publish release tags]
 ```
+
+Stage-to-command map:
+
+| Stage | Purpose | Command / action |
+|---|---|---|
+| Spec definition | Establish product intent and boundaries | Edit `docs/SPEC.md` |
+| Phase scaffolding | Create scoped executable contract | `/phase-init N` |
+| Implementation | Deliver only approved scope | Code + tests in phase files |
+| Quality gate | Verify automated checks and unresolved notes | `/phase-gate N` |
+| Manual review loop | Capture/fix architect findings | Update `Architect Review Notes`, then re-run `/phase-gate N` |
+| Phase finalization | Persist contract updates | `/context-update N` |
+| Integration | Merge validated phase | PR `feat/phase-N` -> `develop` |
+| Spec drift handling | Resync active phases after SPEC edits | `/spec-sync "description"` |
+| Final release | Publish stable state | merge `develop` -> `main`, then tag/release |
 
 ## Deployment
 
