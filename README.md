@@ -49,23 +49,23 @@ Then follow the generated project's stack guide:
 
 ```mermaid
 flowchart TD
-    A[Architect defines product intent in docs/SPEC.md] --> B[/phase-init N/]
-    B --> C[Generate docs/PHASE_NN.md: scope, file plan, contracts]
-    C --> D[Architect reviews phase contract and creates feat/phase-N branch]
-    D --> E[AI implementation inside phase scope]
-    E --> F[/phase-gate N/]
-    F --> G{Automated checks pass and Architect Review Notes resolved?}
-    G -- No --> H[Fix code/tests/docs and update review notes]
+    A["Architect defines product intent in docs/SPEC.md"] --> B["/phase-init N/"]
+    B --> C["Generate docs/PHASE_NN.md: scope, file plan, contracts"]
+    C --> D["Architect reviews phase contract and creates feat/phase-N branch"]
+    D --> E["AI implementation inside phase scope"]
+    E --> F["/phase-gate N/"]
+    F --> G{"Automated checks pass and Architect Review Notes resolved?"}
+    G -- No --> H["Fix code/tests/docs and update review notes"]
     H --> F
     G -- Yes --> I["git commit feat(phase-N): ..."]
-    I --> J[/context-update N/]
-    J --> K[Open PR feat/phase-N -> develop and merge]
-    K --> L{SPEC changed mid-phase?}
-    L -- Yes --> M[/spec-sync \"change description\"/]
+    I --> J["/context-update N/"]
+    J --> K["Open PR feat/phase-N to develop and merge"]
+    K --> L{"SPEC changed mid-phase?"}
+    L -- Yes --> M["/spec-sync 'change description'/"]
     M --> B
-    L -- No --> N{More phases?}
+    L -- No --> N{"More phases?"}
     N -- Yes --> B
-    N -- No --> O[Release cycle: merge develop -> main, publish release tags]
+    N -- No --> O["Release cycle: merge develop to main, publish release tags"]
 ```
 
 Stage-to-command map:
