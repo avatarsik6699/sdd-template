@@ -1,6 +1,6 @@
 # Workflow Playbooks
 
-These files are the **canonical source of truth** for the four SDD workflow procedures.
+These files are the **canonical source of truth** for the SDD workflow procedures.
 
 In generated projects, runtime wrappers under `.claude/skills/` and `plugins/sdd-workflow/`
 point here. In this template repository, shipped wrapper copies live under each template at
@@ -11,6 +11,7 @@ To change a workflow, edit only these files. The runtime wrappers do not contain
 
 Playbooks:
 
+- [spec-init.md](./spec-init.md) — draft or refresh `docs/SPEC.md` from a product brief
 - [phase-init.md](./phase-init.md) — scaffold a new `docs/PHASE_XX.md`
 - [phase-gate.md](./phase-gate.md) — validate a phase before commit
 - [spec-sync.md](./spec-sync.md) — propagate a `docs/SPEC.md` change

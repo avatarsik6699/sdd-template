@@ -53,6 +53,7 @@ DOC_FILES = [
     "README.md",
     "docs/TEMPLATE_AUTHORING.md",
     "workflow/docs/playbooks/README.md",
+    "workflow/docs/playbooks/spec-init.md",
     "workflow/docs/playbooks/phase-init.md",
     "workflow/docs/playbooks/phase-gate.md",
 ]

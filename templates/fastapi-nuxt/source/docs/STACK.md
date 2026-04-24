@@ -183,7 +183,7 @@ Full testing guidelines, including `data-testid` conventions and per-flow spec r
 
 ```
 .
-├── .claude/skills/         # SDD pipeline skills (spec-sync, phase-init, phase-gate, context-update)
+├── .claude/skills/         # SDD pipeline skills (spec-init, spec-sync, phase-init, phase-gate, context-update)
 ├── app/                    # FastAPI backend — see app/README.md
 │   ├── api/v1/             # Routers grouped by resource
 │   ├── core/               # config.py (Pydantic Settings), auth.py (JWT + role guards)

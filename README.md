@@ -12,7 +12,7 @@ This repo is not an application. It is a product factory made of:
 
 Generated projects come with:
 
-- a phased delivery workflow (`SPEC` -> `PHASE_N` -> gate -> context update)
+- a phased delivery workflow (`spec-init` -> `phase-init` -> gate -> context update)
 - agent guardrails (`AGENTS.md`, `CLAUDE.md`)
 - stack runtime source code (backend, frontend, infra files)
 - upgrade metadata for safe managed-file updates
@@ -38,7 +38,7 @@ Then follow the generated project's stack guide:
 
 ## How To Work On A Generated Project
 
-1. Define the product in `docs/SPEC.md`.
+1. Run `/spec-init "project brief"` to draft and validate `docs/SPEC.md`.
 2. Run `/phase-init N` to scaffold the phase contract.
 3. Implement only what `docs/PHASE_NN.md` allows.
 4. Run `/phase-gate N` until all checks and review notes are resolved.
@@ -49,30 +49,33 @@ Then follow the generated project's stack guide:
 
 ```mermaid
 flowchart TD
-    A["Architect defines product intent in docs/SPEC.md"] --> B["/phase-init N/"]
-    B --> C["Generate docs/PHASE_NN.md: scope, file plan, contracts"]
-    C --> D["Architect reviews phase contract and creates feat/phase-N branch"]
-    D --> E["AI implementation inside phase scope"]
-    E --> F["/phase-gate N/"]
-    F --> G{"Automated checks pass and Architect Review Notes resolved?"}
-    G -- No --> H["Fix code/tests/docs and update review notes"]
-    H --> F
-    G -- Yes --> I["git commit feat(phase-N): ..."]
-    I --> J["/context-update N/"]
-    J --> K["Open PR feat/phase-N to develop and merge"]
-    K --> L{"SPEC changed mid-phase?"}
-    L -- Yes --> M["/spec-sync 'change description'/"]
-    M --> B
-    L -- No --> N{"More phases?"}
-    N -- Yes --> B
-    N -- No --> O["Release cycle: merge develop to main, publish release tags"]
+    A["Architect provides project brief"] --> B["/spec-init 'project brief'/"]
+    B --> C["Draft+validate docs/SPEC.md with clarifications"]
+    C --> D["/phase-init N/"]
+    D --> E["Generate docs/PHASE_NN.md: scope, file plan, contracts"]
+    E --> F["Architect reviews phase contract and creates feat/phase-N branch"]
+    F --> G["AI implementation inside phase scope"]
+    G --> H["/phase-gate N/"]
+    H --> I{"Automated checks pass and Architect Review Notes resolved?"}
+    I -- No --> J["Fix code/tests/docs and update review notes"]
+    J --> H
+    I -- Yes --> K["git commit feat(phase-N): ..."]
+    K --> L["/context-update N/"]
+    L --> M["Open PR feat/phase-N to develop and merge"]
+    M --> N{"SPEC changed mid-phase?"}
+    N -- Yes --> O["/spec-sync 'change description'/"]
+    O --> D
+    N -- No --> P{"More phases?"}
+    P -- Yes --> D
+    P -- No --> Q["Release cycle: merge develop to main, publish release tags"]
 ```
 
 Stage-to-command map:
 
 | Stage | Purpose | Command / action |
 |---|---|---|
-| Spec definition | Establish product intent and boundaries | Edit `docs/SPEC.md` |
+| Spec initialization | Build and validate the first complete specification | `/spec-init "description"` |
+| Spec definition | Refine approved product intent and boundaries | Edit `docs/SPEC.md` |
 | Phase scaffolding | Create scoped executable contract | `/phase-init N` |
 | Implementation | Deliver only approved scope | Code + tests in phase files |
 | Quality gate | Verify automated checks and unresolved notes | `/phase-gate N` |

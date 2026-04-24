@@ -7,7 +7,7 @@
 ## Template Repo Scope
 
 - Do not treat `docs/` as live requirements — they are template files with `[PLACEHOLDERS]`.
-- Do not run `/phase-gate`, `/phase-init`, `/spec-sync`, or `/context-update` here. Those skills are for derived projects. Test them in a scratch directory.
+- Do not run `/spec-init`, `/phase-gate`, `/phase-init`, `/spec-sync`, or `/context-update` here. Those skills are for derived projects. Test them in a scratch directory.
 - A change belongs in this repo only if it improves the template for future projects.
 - Keep references consistent across `README.md`, `CLAUDE.md`, `AGENTS.md`, `workflow/`, and the shipped runtime assets under `templates/fastapi-nuxt/source/`.
 
@@ -17,7 +17,7 @@ When you change workflow behavior, edit the canonical playbook — never the wra
 
 | Concern | Canonical source |
 |---|---|
-| Workflow procedure (phase-init, phase-gate, spec-sync, context-update) | [`workflow/docs/playbooks/*.md`](workflow/docs/playbooks/) |
+| Workflow procedure (spec-init, phase-init, phase-gate, spec-sync, context-update) | [`workflow/docs/playbooks/*.md`](workflow/docs/playbooks/) |
 | Rules that ship to derived projects | [`workflow/project-files/AGENTS.md.template`](workflow/project-files/AGENTS.md.template) |
 | Claude-specific adapter for derived projects | [`workflow/project-files/CLAUDE.md.template`](workflow/project-files/CLAUDE.md.template) |
 | Template manifests | `templates/<template-id>/template.yaml` |

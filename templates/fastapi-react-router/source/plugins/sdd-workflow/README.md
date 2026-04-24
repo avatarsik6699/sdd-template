@@ -9,6 +9,7 @@ This plugin makes the repository's SDD workflow visible to Codex as native:
 
 ## What this adds
 
+- `/spec-init`
 - `/phase-init`
 - `/phase-gate`
 - `/context-update`

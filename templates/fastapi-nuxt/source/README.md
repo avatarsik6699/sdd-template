@@ -1,7 +1,7 @@
 # SDD Template — Spec-Driven Development Pipeline
 
 > A reusable pipeline for AI-assisted, phased delivery. The **architect** defines the product intent;
-> `phase-init` scaffolds the phase contract and file plan; the **AI** implements within scope; **gates** enforce quality before every commit.
+> `spec-init` drafts the spec, `phase-init` scaffolds phase contracts, the **AI** implements within scope, and **gates** enforce quality before every commit.
 
 ---
 
@@ -32,7 +32,7 @@ Nuxt `prepare` pre-step required before frontend type/tests — lives in
    `sdd init` is the canonical entrypoint for creating a working copy of the template. The compatibility script still replaces placeholders, generates `.env`, creates random secrets, and copies both `AGENTS.md` and `CLAUDE.md` into place for the current reference stack.
    Prerequisites and post-init steps → **[docs/STACK.md](docs/STACK.md#prerequisites)**.
 
-2. **Fill in [docs/SPEC.md](docs/SPEC.md)** — strategic brief, goals, domain rules.
+2. **Initialize [docs/SPEC.md](docs/SPEC.md)**: `/spec-init "project brief"` — drafts and validates the specification.
 
 3. **Scaffold phase 1**: `/phase-init 01` — generates `docs/PHASE_01.md` from SPEC.
 
@@ -44,8 +44,8 @@ Nuxt `prepare` pre-step required before frontend type/tests — lives in
 
 ```mermaid
 flowchart TD
-    Spec[docs/SPEC.md filled in by architect]
-    Spec --> Init["/phase-init N<br/>scaffolds PHASE_N.md, contracts, and file plan from SPEC"]
+    Brief[Architect provides project brief] --> SpecInit["/spec-init<br/>drafts + validates SPEC.md"]
+    SpecInit --> Init["/phase-init N<br/>scaffolds PHASE_N.md, contracts, and file plan from SPEC"]
     Init --> Fill[Architect reviews scaffold<br/>creates feat/phase-N branch]
     Fill --> Impl[AI implements scope on feat/phase-N]
     Impl --> Gate["/phase-gate N<br/>automated checks"]
@@ -72,6 +72,7 @@ Affected phases are marked `⚠️ NEEDS_REVIEW` in `docs/STATE.md` until resolv
 
 | Command | When to use |
 |---------|-------------|
+| `/spec-init [project brief]` | At project start (or major reset) to draft and critically validate [docs/SPEC.md](docs/SPEC.md) |
 | `/spec-sync [description]` | Immediately after editing [docs/SPEC.md](docs/SPEC.md) |
 | `/phase-init [N]` | To scaffold the next [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) from SPEC |
 | `/phase-gate [N]` | Before committing — runs automated checks (including deterministic Playwright Chromium E2E) and also fails if `Architect Review Notes` still contain unchecked items |
@@ -97,7 +98,7 @@ Portable workflow playbooks live under [workflow/docs/playbooks/](workflow/docs/
 | [docs/E2E_PIPELINE_CHECKLIST.md](docs/E2E_PIPELINE_CHECKLIST.md) | Optional rollout guide if a derived project later enables CI E2E |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Short ADR-style technical decisions worth remembering |
 | [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md) | Repeated pitfalls, symptoms, and shortest safe fixes |
-| [workflow/docs/playbooks/README.md](workflow/docs/playbooks/README.md) | Portable workflow playbooks for phase-init, gate, sync, and context update |
+| [workflow/docs/playbooks/README.md](workflow/docs/playbooks/README.md) | Portable workflow playbooks for spec-init, phase-init, gate, sync, and context update |
 | [AGENTS.md](AGENTS.md) | Canonical rules — scope lock, gate-before-commit, docs lookup, permission handoff |
 | [CLAUDE.md](CLAUDE.md) | Thin Claude adapter — points at AGENTS.md |
 
@@ -105,7 +106,7 @@ Portable workflow playbooks live under [workflow/docs/playbooks/](workflow/docs/
 
 ## Philosophy
 
-- **Architect defines intent, phase-init scaffolds contracts, AI fills them in.** The architect writes SPEC, reviews the phase scaffold, and approves merges. `phase-init` generates the phase contract and file plan, and the AI produces code, tests, and doc updates strictly inside that scope.
+- **Architect defines intent, spec-init hardens SPEC, phase-init scaffolds contracts.** The architect provides the brief, `spec-init` drafts and validates `SPEC.md`, then `phase-init` generates the phase contract and file plan. The AI produces code, tests, and doc updates strictly inside that scope.
 - **Contracts beat conventions.** Every phase has an explicit contract (scope, files, endpoints, types, env vars). Nothing implicit.
 - **Gates, not promises.** Quality is proven by a passing `/phase-gate` report (unit + type + e2e + smoke + resolved architect review notes), not by the AI claiming "looks good".
 - **Docs are alive.** `CONTEXT.md` is the single source of truth for what exists; `STATE.md` tracks progress; `CHANGELOG.md` records why things changed. `CONTEXT.md` must never lag more than one phase behind.
