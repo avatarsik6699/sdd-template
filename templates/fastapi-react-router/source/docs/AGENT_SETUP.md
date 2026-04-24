@@ -98,6 +98,36 @@ Rules:
 - Keep it out of default gate automation (`phase-gate` still uses deterministic `playwright test`)
 - Convert validated manual findings into reproducible E2E specs where possible
 
+## Caveman (manual token-compression profile)
+
+Use Caveman only when you explicitly want compressed agent responses (for example long debugging loops).
+Do not make it default policy for the project.
+
+Quick install from project root:
+
+```bash
+./scripts/install-caveman.sh
+```
+
+Agent-specific installs:
+
+```bash
+# Codex
+./scripts/install-caveman.sh codex
+
+# Cursor or Windsurf (pass --copy on Windows if symlinks fail)
+./scripts/install-caveman.sh cursor --copy
+./scripts/install-caveman.sh windsurf --copy
+
+# Claude Code plugin path
+./scripts/install-caveman.sh claude-code
+```
+
+Usage:
+
+- Activate when needed: `/caveman` (Codex: `$caveman`)
+- Keep normal mode for phase contracts, architecture docs, and final handoff notes unless asked otherwise
+
 ## Portable Recommendation
 
 For multi-model projects:

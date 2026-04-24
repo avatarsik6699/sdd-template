@@ -100,6 +100,25 @@ pnpm playwright:cli -- screenshot
 
 Prefer `pnpm test:e2e --project=chromium` for deterministic pass/fail checks, and convert manual findings into E2E specs when possible.
 
+## Manual response compression (Caveman, opt-in)
+
+Use this only when you explicitly want shorter agent output to reduce token usage in long debugging loops.
+It is not part of `phase-gate`.
+
+```bash
+# Install once in the project
+./scripts/install-caveman.sh
+
+# Activate only when needed in a session
+/caveman
+# Codex trigger:
+$caveman
+```
+
+Notes:
+- Keep default project policy in normal response mode.
+- Prefer normal mode for final docs, contracts, and handoff notes.
+
 React Router SSR is enabled in `frontend/react-router.config.ts`. Route modules use `meta()`
 exports for document title and SEO metadata.
 

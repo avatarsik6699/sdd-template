@@ -87,6 +87,13 @@ Post the exact handoff message from [docs/KNOWN_GOTCHAS.md § Docker-owned files
 7. If the project later enables CI E2E, use [docs/E2E_PIPELINE_CHECKLIST.md](../docs/E2E_PIPELINE_CHECKLIST.md) as the rollout guide. It is not a default branch-protection requirement.
 8. Manual browser investigation via Playwright CLI is allowed only when explicitly requested by the user/architect. Keep it out of default gate automation and use it to reproduce or inspect issues that deterministic tests did not capture.
 
+## Response Compression Tools (Opt-in)
+
+1. Optional response compression tools (for example Caveman) are allowed only when explicitly requested by the user/architect.
+2. Keep compression mode out of default project policy and out of gate automation.
+3. Prefer normal response style for phase contracts, architecture decisions, and handoff notes unless the user requests compressed style for that artifact.
+4. If compressed/manual investigation reveals actionable issues, convert them into deterministic tests or concrete checklist items in phase docs.
+
 ## Spec Change Sync Protocol
 
 When `docs/SPEC.md` is modified:

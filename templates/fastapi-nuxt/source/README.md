@@ -38,6 +38,14 @@ Nuxt `prepare` pre-step required before frontend type/tests — lives in
 
 4. **Iterate the phase cycle** (diagram below) until all phases are closed, then release.
 
+Optional, when you want compressed agent responses for long debug loops:
+
+```bash
+./scripts/install-caveman.sh
+```
+
+Then activate only when needed (`/caveman`, Codex: `$caveman`).
+
 ---
 
 ## Pipeline

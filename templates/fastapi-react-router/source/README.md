@@ -16,3 +16,11 @@ docker compose up --build
 ```
 
 See [docs/STACK.md](docs/STACK.md) for setup, commands, and gate expectations.
+
+Optional, when you want compressed agent responses for long debug loops:
+
+```bash
+./scripts/install-caveman.sh
+```
+
+Then activate only when needed (`/caveman`, Codex: `$caveman`).

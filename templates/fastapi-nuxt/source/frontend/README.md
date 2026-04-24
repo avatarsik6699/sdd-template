@@ -166,6 +166,10 @@ pnpm test:e2e:ui
 
 # Manual interactive browser debugging (opt-in)
 pnpm playwright:cli -- open http://localhost:3000 --headed
+
+# Install Caveman (optional token-compression profile for agent output)
+cd ..
+./scripts/install-caveman.sh
 ```
 
 Default base URL: `http://localhost:3000`. Override with `PLAYWRIGHT_BASE_URL`.
@@ -191,6 +195,7 @@ The `/phase-gate` skill requires a ✅ e2e row before commit — unit tests alon
 - **Test data must be deterministic**: unique per worker/test and never dependent on run order or leftovers.
 - **Debugging a failure**: open `playwright-report/index.html`, or run with the inspector: `pnpm test:e2e:ui`.
 - **Manual browser investigation**: only when explicitly requested, run Playwright CLI commands (`pnpm playwright:cli -- ...`) to inspect a live page and capture evidence.
+- **Manual response compression**: Caveman is opt-in only (`./scripts/install-caveman.sh` + `/caveman` or `$caveman`) and should not be treated as default project response mode.
 - **Test IDs are kebab-case** to match the `testIdAttribute: 'data-testid'` config.
 
 ### E2E troubleshooting

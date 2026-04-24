@@ -36,6 +36,8 @@ pnpm test
 pnpm test:e2e:lint
 pnpm test:e2e --project=chromium
 pnpm playwright:cli -- open http://localhost:3000 --headed
+cd ..
+./scripts/install-caveman.sh
 pnpm build
 pnpm start
 ```
@@ -47,3 +49,4 @@ pnpm start
 - Use SSR-safe rendering only in route modules and `root.tsx`.
 - Prefer simple CSS in `app/styles/app.css`; this template does not depend on Tailwind.
 - Use Playwright CLI only for explicit manual debugging requests; keep gate automation on deterministic Playwright test commands.
+- Use Caveman only as an explicit opt-in response compression mode (`./scripts/install-caveman.sh` + `/caveman` or `$caveman`), not as default project policy.
