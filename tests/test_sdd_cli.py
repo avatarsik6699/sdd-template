@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -15,6 +16,12 @@ from workflow.cli import main as cli_main
 from workflow.cli.main import app
 
 runner = CliRunner()
+
+ANSI_ESCAPE_SEQUENCE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
+
+def _strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE_SEQUENCE.sub("", text)
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -1350,7 +1357,7 @@ def test_upgrade_workspace_current_rejects_explicit_release_targets(tmp_path: Pa
     )
 
     assert result.exit_code != 0
-    assert "`--to` targets require `--source released-artifact`" in result.stderr
+    assert "`--to` targets require `--source released-artifact`" in _strip_ansi(result.stderr)
 
 
 def test_upgrade_check_reports_all_incompatible_project_metadata_versions(tmp_path: Path) -> None:
