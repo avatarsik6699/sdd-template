@@ -1,0 +1,84 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(215, 225, 255, 0.9), transparent 48%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef2f8 100%);
+  color: #172033;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 3rem 1.5rem;
+}
+
+.shell-narrow {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+.hero,
+.card {
+  width: min(100%, 56rem);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(23, 32, 51, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  color: #51617e;
+}
+
+.lede {
+  max-width: 42rem;
+  line-height: 1.6;
+}
+
+.cta,
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.9rem 1.2rem;
+  background: #172033;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.form input {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(23, 32, 51, 0.15);
+  padding: 0.85rem 1rem;
+  background: #fff;
+}

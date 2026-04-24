@@ -1,4 +1,6 @@
 import os
+import sys
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -26,6 +28,9 @@ if TEST_DATABASE_URL.startswith("sqlite"):
 
 os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-ci-only")
+
+TEMPLATE_SOURCE_ROOT = Path(__file__).resolve().parents[1] / "templates" / "fastapi-nuxt" / "source"
+sys.path.insert(0, str(TEMPLATE_SOURCE_ROOT))
 
 from app.db.base import Base  # noqa: E402
 from app.db.session import get_db  # noqa: E402

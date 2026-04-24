@@ -1,0 +1,51 @@
+# Production overrides — apply on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# IMPORTANT: docker-compose.override.yml must NOT be present on the server.
+# Delete it after cloning: rm docker-compose.override.yml
+#
+# First-time SSL issuance (run BEFORE starting the full stack):
+#   docker run --rm -p 80:80 \
+#     -v /etc/letsencrypt:/etc/letsencrypt \
+#     certbot/certbot certonly --standalone \
+#     -d your-domain.com -d www.your-domain.com \
+#     --email admin@your-domain.com --agree-tos --no-eff-email
+#
+# SSL renewal (add to VPS cron):
+#   0 */12 * * * cd /opt/your-project && \
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     run --rm certbot renew --quiet && \
+#     docker compose exec nginx nginx -s reload
+
+services:
+  backend:
+    environment:
+      APP_ENV: production
+
+  frontend:
+    environment:
+      APP_ENV: production
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :; do
+               certbot renew --quiet;
+               sleep 12h & wait $${!};
+             done"
+
+volumes:
+  certbot-www:

@@ -1,0 +1,12 @@
+# CI-only override: runs the production frontend image (no dev server,
+# no bind mounts, no UID constraints) and publishes both frontend and
+# backend ports so Playwright can reach the UI at localhost:3000 and
+# perform fixture setup against the API at localhost:8000.
+services:
+  backend:
+    ports:
+      - "8000:8000"
+
+  frontend:
+    ports:
+      - "3000:3000"

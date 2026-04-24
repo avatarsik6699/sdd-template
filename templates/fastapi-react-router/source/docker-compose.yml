@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-myapp}
+    volumes:
+      # Postgres 18+ expects the parent directory to be mounted.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # Probe server readiness only; checking a specific DB can flap during
+      # initdb on cold CI runners before POSTGRES_DB creation completes.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app_user} -d postgres || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      # GitHub-hosted runners can be slow on first boot after image pulls.
+      start_period: 60s
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # python:slim has no curl; use the interpreter we already have.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health').status==200 else 1)\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VITE_API_BASE_INTERNAL: ${API_BASE_INTERNAL_URL:-http://backend:8000/api/v1}
+      VITE_PUBLIC_API_BASE: ${API_BASE_URL:-http://localhost:8000/api/v1}
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/project:ro
+    command: ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/project/nginx.conf"]
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  pgdata:

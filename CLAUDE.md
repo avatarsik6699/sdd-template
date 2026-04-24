@@ -8,13 +8,15 @@ This file adds only Claude-specific notes.
 
 This repo IS the template. Do not run `/phase-gate`, `/phase-init`, `/spec-sync`, or `/context-update` against this repo's `docs/` — those skills are shipped to derived projects. Test them in a scratch directory.
 
-## Skills defined here (shipped to derived projects)
+## Skills shipped from this repo
 
 | Skill | Canonical playbook |
 |-------|--------------------|
-| `/phase-init` | [`docs/workflows/phase-init.md`](docs/workflows/phase-init.md) |
-| `/phase-gate` | [`docs/workflows/phase-gate.md`](docs/workflows/phase-gate.md) |
-| `/spec-sync` | [`docs/workflows/spec-sync.md`](docs/workflows/spec-sync.md) |
-| `/context-update` | [`docs/workflows/context-update.md`](docs/workflows/context-update.md) |
+| `/phase-init` | [`workflow/docs/playbooks/phase-init.md`](workflow/docs/playbooks/phase-init.md) |
+| `/phase-gate` | [`workflow/docs/playbooks/phase-gate.md`](workflow/docs/playbooks/phase-gate.md) |
+| `/spec-sync` | [`workflow/docs/playbooks/spec-sync.md`](workflow/docs/playbooks/spec-sync.md) |
+| `/context-update` | [`workflow/docs/playbooks/context-update.md`](workflow/docs/playbooks/context-update.md) |
 
-The files under `.claude/skills/*/SKILL.md` and `plugins/sdd-workflow/{skills,commands}/` are thin wrappers pointing at the playbooks above. To change workflow behavior, edit the playbook — never the wrapper.
+The shipped files under `templates/<template-id>/source/.claude/skills/` and
+`templates/<template-id>/source/plugins/sdd-workflow/` are thin wrappers pointing at the
+playbooks above. To change workflow behavior, edit the playbook, never the wrapper.

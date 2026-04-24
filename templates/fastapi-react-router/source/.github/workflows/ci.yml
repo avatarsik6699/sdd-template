@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Template Marker Guard ─────────────────────────────────────────────────
+  # This repository is a scaffold template, so marker tokens are expected.
+  # Fail only if required markers disappear from canonical template files.
+  placeholder-guard:
+    name: Template Markers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure required template markers still exist
+        run: |
+          grep -q '\[PROJECT_NAME\]' app/main.py
+          grep -q '\[PROJECT_DESCRIPTION\]' app/main.py
+          grep -q '\[PROJECT_NAME\]' frontend/app/pages/login.vue
+          grep -q '\[PROJECT_NAME\]' frontend/app/pages/dashboard.vue
+          grep -q '\[PROJECT_NAME\]' frontend/app/widgets/sidebar/ui/sidebar-nav.vue
+          grep -q '\[PROJECT_NAME\]' docs/SPEC.md
+          grep -q '\[PROJECT_NAME\]' docs/STATE.md
+
+  # ── Backend Lint ──────────────────────────────────────────────────────────
+  lint-backend:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install backend deps
+        run: uv sync --dev
+
+      - name: Ruff lint
+        run: uv run ruff check app/ tests/
+
+  # ── Backend Tests ─────────────────────────────────────────────────────────
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: app_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: myapp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --dev
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://app_user:ci_password@localhost:5432/myapp_test
+          SECRET_KEY: ci-test-secret-key
+        run: uv run alembic upgrade head
+
+      - name: Run pytest
+        env:
+          DATABASE_URL: postgresql+asyncpg://app_user:ci_password@localhost:5432/myapp_test
+          SECRET_KEY: ci-test-secret-key
+        run: uv run pytest tests/ -v
+
+  # ── Frontend (Lint + Tests) ───────────────────────────────────────────────
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.33.0"
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Nuxt prepare (generate types)
+        working-directory: frontend
+        run: pnpm nuxt prepare
+
+      - name: ESLint
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: TypeScript check
+        working-directory: frontend
+        run: pnpm exec tsc --noEmit
+
+      - name: Vitest
+        working-directory: frontend
+        run: pnpm vitest run
+
+  # ── Docker Build ──────────────────────────────────────────────────────────
+  build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint-backend, test-backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -f Dockerfile.backend -t my-project-backend:ci .
+
+      - name: Build frontend image
+        run: docker build -f Dockerfile.frontend -t my-project-frontend:ci ./frontend

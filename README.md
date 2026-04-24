@@ -12,12 +12,29 @@ The SDD pipeline is a **stack-agnostic process** for delivering software in atom
 - **Documents** encode intent (`SPEC`), a living contract (`CONTEXT`), progress (`STATE`), a change history (`CHANGELOG`), and scoped tasks (`PHASE_XX`).
 - **Skills** (slash commands) automate phase scaffolding, gate checks, and doc synchronisation.
 - **Rules** in [AGENTS.md](AGENTS.md) (with [CLAUDE.md](CLAUDE.md) as a thin Claude adapter) keep AI agents inside the phase scope and force a passing gate before commit.
-- **Repo memory files** ([docs/DECISIONS.md](docs/DECISIONS.md), [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md)) keep architecture and operational context stable across agent sessions.
+- **Repo memory files** inside each template (for example `templates/<id>/source/docs/DECISIONS.md`
+  and `templates/<id>/source/docs/KNOWN_GOTCHAS.md`) keep architecture and operational context
+  stable across agent sessions.
 
-The reference implementation ships with a concrete stack (FastAPI + Nuxt 4 + PostgreSQL + Docker).
-Everything stack-specific — setup commands, directory layout, testing tools, migrations, and the
-Nuxt `prepare` pre-step required before frontend type/tests — lives in
-**[docs/STACK.md](docs/STACK.md)**. Swap that file when swapping stacks; the pipeline does not change.
+The repository now ships multiple concrete stacks:
+
+- [templates/fastapi-nuxt](templates/fastapi-nuxt/README.md) — FastAPI + Nuxt 4
+- [templates/fastapi-react-router](templates/fastapi-react-router/README.md) — FastAPI + React Router SSR
+
+Each template owns its own stack guide under `templates/<id>/source/docs/STACK.md`. `sdd init`
+composes generated projects from `workflow/` plus `templates/<id>/source/`. The repository root is
+now a template-authoring workspace only: it owns `workflow/`, `templates/`, tests, and maintainer
+docs, but it is not a runnable product stack.
+
+Maintainers adding another stack should start with
+**[docs/TEMPLATE_AUTHORING.md](docs/TEMPLATE_AUTHORING.md)** and
+`uv run sdd register-template templates/<template-id> --write`.
+When validating maintainer-only experiments under `dev/`, use `uv run sdd dev diff` and
+`uv run sdd dev promote` only to map changes back to authoritative sources; generated files in
+`dev/` are not promotion targets.
+The template-repo CI now validates both shipped templates at the runtime level too: backend lint,
+backend tests, frontend validation, and image builds all run for both templates, while Playwright
+E2E remains local-only by default.
 
 ---
 
@@ -25,15 +42,36 @@ Nuxt `prepare` pre-step required before frontend type/tests — lives in
 
 1. **Initialise a new project** from this template:
    ```bash
-   ./scripts/init-project.sh <project-slug> <domain> [admin-email]
-   # Example: ./scripts/init-project.sh user-dashboard example.com admin@example.com
+   uv run sdd init --template fastapi-react-router --project-name user-dashboard ./user-dashboard
+   cd user-dashboard
+   ./scripts/init-project.sh user-dashboard example.com admin@example.com
    ```
-   The script replaces placeholders, generates `.env`, creates random secrets, and copies both `AGENTS.md` and `CLAUDE.md` into place.
-   Prerequisites and post-init steps → **[docs/STACK.md](docs/STACK.md#prerequisites)**.
+   `sdd init` is the canonical entrypoint for creating a working copy of the template. It now
+   composes the generated project from `workflow/` plus the selected `templates/<id>/source/`, writes
+   the workflow-managed `AGENTS.md` and `CLAUDE.md` files, and records provenance/ownership
+   metadata in `.sdd-origin.yaml`, `.sdd-lock.yaml`, and `.sdd/ownership.yaml`.
+   The compatibility script still handles stack-specific placeholder replacement, `.env`
+   generation, and random secret creation for the selected stack.
+   Downstream projects can now preview managed updates with `uv run sdd upgrade --check`
+   and apply the safe subset with `uv run sdd upgrade --apply`. By default, upgrades resolve
+   against released workflow/template artifacts. Maintainers can still inspect the current
+   checkout explicitly with `uv run sdd upgrade --source workspace-current --check`.
+   Generated projects can inspect their active gate helper/docs contract with
+   `uv run sdd gate resolve`.
+   The safe apply path now includes clean three-way text merges for managed files when the
+   installed baseline can be reconstructed reliably.
+   Maintainers can inspect and validate component release coordinates with
+   `uv run sdd release status` and `uv run sdd release validate --scope workflow|template --skip-tag-checks`
+   before tagging `workflow/v...` and `template/<id>/v...`.
+   Prerequisites and post-init steps →
+   **[templates/fastapi-react-router/source/docs/STACK.md](templates/fastapi-react-router/source/docs/STACK.md#prerequisites)**.
 
-2. **Fill in [docs/SPEC.md](docs/SPEC.md)** — strategic brief, goals, domain rules.
+2. **Inside the generated project, fill in `docs/SPEC.md`** — the shipped canonical copy comes
+   from the selected template's `templates/<id>/source/docs/SPEC.md`.
 
-3. **Scaffold phase 1**: `/phase-init 01` — generates `docs/PHASE_01.md` from SPEC.
+3. **Inside the generated project, scaffold phase 1**: `/phase-init 01` — it generates
+   `docs/PHASE_01.md` from SPEC. The shipped canonical phase template comes from the selected
+   template's `templates/<id>/source/docs/PHASE_TEMPLATE.md`.
 
 4. **Iterate the phase cycle** (diagram below) until all phases are closed, then release.
 
@@ -61,7 +99,7 @@ flowchart TD
 ```
 
 **Mid-flight SPEC edits** → run `/spec-sync [description]` before continuing.
-Affected phases are marked `⚠️ NEEDS_REVIEW` in `docs/STATE.md` until resolved.
+Affected phases are marked `⚠️ NEEDS_REVIEW` in the generated project's `docs/STATE.md` until resolved.
 
 **Hotfixes** → branch `hotfix/*` from `main`, merge into both `main` and `develop`.
 
@@ -71,14 +109,14 @@ Affected phases are marked `⚠️ NEEDS_REVIEW` in `docs/STATE.md` until resolv
 
 | Command | When to use |
 |---------|-------------|
-| `/spec-sync [description]` | Immediately after editing [docs/SPEC.md](docs/SPEC.md) |
-| `/phase-init [N]` | To scaffold the next [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) from SPEC |
-| `/phase-gate [N]` | Before committing — runs automated checks (including deterministic Playwright Chromium E2E) and also fails if `Architect Review Notes` still contain unchecked items |
+| `/spec-sync [description]` | Immediately after editing the generated project's `docs/SPEC.md` |
+| `/phase-init [N]` | To scaffold the next generated-project `docs/PHASE_XX.md` from SPEC |
+| `/phase-gate [N]` | Before committing — runs automated checks (including the local deterministic Playwright Chromium E2E path) and also fails if `Architect Review Notes` still contain unchecked items |
 | `/context-update [N]` | After the gate passes — bumps `CONTEXT.md` version, updates `STATE.md` and `CHANGELOG.md` |
 
-Skill definitions live under [.claude/skills/](.claude/skills/).
+Shipped skill definitions live under `templates/<id>/source/.claude/skills/`.
 They are Claude Code native, but the underlying workflows can also be followed manually or mapped into other agent runtimes.
-Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.md).
+Portable workflow playbooks live under [workflow/docs/playbooks/](workflow/docs/playbooks/README.md).
 
 ---
 
@@ -86,17 +124,20 @@ Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.m
 
 | File | What it answers |
 |------|----------------|
-| [docs/SPEC.md](docs/SPEC.md) | What are we building? What are the rules? |
-| [docs/CONTEXT.md](docs/CONTEXT.md) | What is in the system right now? (versioned contract) |
-| [docs/STATE.md](docs/STATE.md) | Where are we in the process? What is blocked? |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Why did the contract change? Which phases were affected? |
-| [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) | What exactly should the AI implement this iteration? |
-| [docs/STACK.md](docs/STACK.md) | Stack-specific setup, testing, layout, and conventions |
-| [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md) | Context7, MCP, and cross-agent setup guidance |
-| [docs/E2E_PIPELINE_CHECKLIST.md](docs/E2E_PIPELINE_CHECKLIST.md) | Required E2E CI/branch-protection contract for derived projects |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Short ADR-style technical decisions worth remembering |
-| [docs/KNOWN_GOTCHAS.md](docs/KNOWN_GOTCHAS.md) | Repeated pitfalls, symptoms, and shortest safe fixes |
-| [docs/workflows/README.md](docs/workflows/README.md) | Portable workflow playbooks for phase-init, gate, sync, and context update |
+| `templates/<id>/source/docs/SPEC.md` | Canonical template copy of the strategic brief and domain rules |
+| `templates/<id>/source/docs/CONTEXT.md` | Canonical template copy of the living technical contract |
+| `templates/<id>/source/docs/STATE.md` | Canonical template copy of the phase tracker |
+| `templates/<id>/source/docs/CHANGELOG.md` | Canonical template copy of the contract change history |
+| `templates/<id>/source/docs/PHASE_TEMPLATE.md` | Canonical phase template shipped into generated projects |
+| `templates/<id>/source/docs/STACK.md` | Canonical stack-specific setup, testing, layout, and conventions for the selected template |
+| `templates/<id>/source/docs/AGENT_SETUP.md` | Canonical agent-setup guidance shipped to generated projects |
+| `templates/<id>/source/docs/E2E_PIPELINE_CHECKLIST.md` | Optional rollout checklist if a derived project later enables CI E2E |
+| `templates/<id>/source/docs/DECISIONS.md` | Canonical ADR-style memory file for derived projects |
+| `templates/<id>/source/docs/KNOWN_GOTCHAS.md` | Canonical recurring-pitfall log for derived projects |
+| [workflow/docs/playbooks/README.md](workflow/docs/playbooks/README.md) | Portable workflow playbooks for phase-init, gate, sync, and context update |
+| `templates/<id>/template.yaml` | Canonical manifest for a template |
+| [docs/TEMPLATE_AUTHORING.md](docs/TEMPLATE_AUTHORING.md) | Maintainer guide for adding and registering new templates |
+| [`.codex/skills/template-repo-maintainer/SKILL.md`](.codex/skills/template-repo-maintainer/SKILL.md) | Repo-only maintainer skill for AI-assisted template development |
 | [AGENTS.md](AGENTS.md) | Canonical rules — scope lock, gate-before-commit, docs lookup, permission handoff |
 | [CLAUDE.md](CLAUDE.md) | Thin Claude adapter — points at AGENTS.md |
 
@@ -121,13 +162,17 @@ Portable workflow playbooks live under [docs/workflows/](docs/workflows/README.m
 
 Adding unchecked architect review notes by itself does not complete the loop. Those notes mean the phase is still open. The phase is only ready to commit when the fixes are done, the automated checks are green, and there are no unchecked architect review items left.
 
-For derived repositories, set branch protection so the CI job `E2E (Chromium)` is required before merge, and apply the rollout checklist in [docs/E2E_PIPELINE_CHECKLIST.md](docs/E2E_PIPELINE_CHECKLIST.md).
+For derived repositories, keep E2E in the local `/phase-gate` path by default. If a project later
+decides to make E2E part of CI, use the selected template's
+`templates/<id>/source/docs/E2E_PIPELINE_CHECKLIST.md` as an opt-in rollout guide rather than a
+default branch-protection rule.
 
 ---
 
 ## Stack
 
-This template's reference implementation is **FastAPI + Nuxt 4 + PostgreSQL + Docker**.
-For prerequisites, environment setup, commands, project structure, testing, and per-module style guides, see **[docs/STACK.md](docs/STACK.md)**.
+The repository now ships multiple stack templates. For prerequisites, environment setup, commands,
+project structure, testing, and per-module style guides, read the selected template's
+`templates/<id>/source/docs/STACK.md`.
 
-Future versions will publish the pipeline core and stack overlays as separate packages so the same SDD process can wrap any stack.
+Future versions will publish the workflow and stack overlays as separate packages so the same SDD process can wrap any stack.

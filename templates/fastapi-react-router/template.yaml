@@ -1,0 +1,24 @@
+manifest_schema_version: "0.1"
+template_id: "fastapi-react-router"
+display_name: "FastAPI + React Router SSR Reference Stack"
+version: "0.1.0"
+source_dir: "source"
+technologies:
+  - "FastAPI"
+  - "React Router 7"
+  - "React 19"
+  - "PostgreSQL"
+  - "Docker Compose"
+package_managers:
+  backend: "uv"
+  frontend: "pnpm"
+init_hooks:
+  - id: "compatibility-init"
+    kind: "script"
+    path: "scripts/init-project.sh"
+    summary: "Generates AGENTS.md and CLAUDE.md, injects secrets, and replaces stack placeholders."
+gate:
+  helper_script: "scripts/phase-gate.sh"
+  stack_docs: "docs/STACK.md"
+smoke:
+  docs_anchor: "docs/STACK.md#gate-commands"

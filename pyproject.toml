@@ -1,7 +1,7 @@
 [project]
-name = "my-project"
+name = "sdd-template"
 version = "0.1.0"
-description = "[PROJECT_NAME] backend"
+description = "Workflow CLI and canonical templates for the SDD template repository."
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.115.0",
@@ -13,7 +13,12 @@ dependencies = [
     "bcrypt>=4.0.0",
     "pydantic-settings>=2.6.0",
     "httpx>=0.27.0",
+    "typer>=0.24.0",
+    "pyyaml>=6.0",
 ]
+
+[project.scripts]
+sdd = "workflow.cli.main:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -22,7 +27,7 @@ asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
@@ -51,4 +56,22 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["workflow"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"workflow" = "workflow"
+"templates" = "templates"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/templates",
+    "/workflow",
+    "/docs",
+    "/README.md",
+    "/AGENTS.md",
+    "/CLAUDE.md",
+    "/tests",
+    "/.github",
+    "/pyproject.toml",
+    "/uv.lock",
+]
