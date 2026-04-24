@@ -23,27 +23,32 @@ but uses Codex-native plugin discovery through:
 
 ## Hooks
 
-Codex runtime hooks are enabled through project-scoped config in
-[`../../.codex/config.toml`](../../.codex/config.toml) and loaded from
-[`../../.codex/hooks.json`](../../.codex/hooks.json). The plugin-local
-[`hooks.json`](./hooks.json) is kept as a reference copy for the workflow
-bundle; current Codex plugin manifests do not load hooks directly.
+The plugin-local [`hooks.json`](./hooks.json) is a reference policy for the
+workflow bundle. Current Codex plugin manifests do not load hooks directly.
+
+If your workspace uses project-scoped Codex hook config, point it at this
+plugin-local file.
 
 The active hook only covers `PreToolUse` for `Bash`. Codex currently does not
 emit `Write`, `Edit`, or `MultiEdit` for `PostToolUse`, so format-on-write hooks
 cannot be implemented through the current hooks API.
 
-## Context7
+## Docs MCPs
 
-The plugin declares a project-local `context7` MCP server in [`.mcp.json`](./.mcp.json).
-In this workspace, Codex also has a global MCP entry already configured, which is
-the most reliable option when the `context7-mcp` binary is not on PATH.
+The plugin declares project-local docs MCP servers in [`.mcp.json`](./.mcp.json):
+
+- `context7` (third-party library/framework docs)
+- `openaiDeveloperDocs` (OpenAI platform/developer docs)
+
+In this workspace, Codex can also use global MCP entries, which remain the most
+reliable option when `context7-mcp` is not on PATH.
 
 Recommended docs lookup order for this project:
 
-1. `context7` via MCP
-2. `ctx7` CLI fallback
-3. Official docs only when Context7 is unavailable
+1. `context7` via MCP for third-party library/framework docs
+2. `openaiDeveloperDocs` via MCP for OpenAI platform/API docs
+3. `ctx7` CLI fallback
+4. Official docs only when MCP/CLI are unavailable
 
 See:
 
@@ -55,5 +60,5 @@ See:
 After adding or changing plugin files, restart Codex in this workspace so the
 plugin, slash commands, and marketplace entry are reloaded.
 
-After adding or changing `.codex/config.toml` or `.codex/hooks.json`, restart
-Codex so runtime hooks are reloaded.
+If you wire this reference into your own `.codex` hook config, restart Codex
+after changing the hook files so runtime hooks are reloaded.
