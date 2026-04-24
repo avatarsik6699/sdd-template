@@ -1071,6 +1071,8 @@ Current state:
 - safe `--apply` behavior is implemented for both workspace-current and released-artifact paths
 - clean three-way text merges now promote eligible managed files from `merge-required` to auto-merge when the installed baseline can be reconstructed reliably
 - maintainer-facing `sdd release status` and `sdd release validate` commands now make workflow/template release coordinates and tag expectations explicit before publishing component tags
+- end-to-end CLI tests now exercise real `workflow/vX.Y.Z` and `template/<id>/vX.Y.Z` git tags through `git archive`-backed resolution, covering `sdd release status`, `sdd release validate --expect-existing-tags`, `sdd upgrade --check`, and `sdd upgrade --apply` against published artifacts
+- `write_workflow_project_files` now accepts an explicit source directory so upgrade target and baseline snapshots render `AGENTS.md` / `CLAUDE.md` from the tagged `workflow/project-files/`, rather than accidentally falling back to the workspace copy when the workspace has drifted ahead of the installed or target release
 
 ### Phase 9. Rebuild gate dispatch around workflow-owned orchestration
 
@@ -1120,9 +1122,11 @@ Current state:
   - `Workflow Contract`
   - `Template Contract`
   - `Integration CLI`
+  - `Release E2E`
   - template runtime jobs for backend, frontend, and image build
 - E2E remains part of the local phase-gate path, but is no longer a default CI requirement for shipped templates
 - `sdd release validate` now supports `--scope workflow|template|all` and `--skip-tag-checks`, so everyday CI can validate component structure without pretending each run is a release event
+- release-path tests are marked `@pytest.mark.release_e2e` and run in an isolated `Release E2E` CI job so regressions in the released-artifact resolution path are visible as such; the `Integration CLI` job excludes this marker to avoid double-running the ephemeral-tag fixtures
 
 ### Phase 11. Add template-authoring automation and guidance
 
@@ -1145,6 +1149,7 @@ Current state:
 - `sdd register-template` now produces a richer `draft_manifest` with inferred package managers, technologies, init hooks, gate metadata, and smoke metadata
 - `sdd register-template --write` can bootstrap `template.yaml` for a new template directory, while still requiring human review for ambiguous fields
 - maintainer guidance for this loop now lives in `docs/TEMPLATE_AUTHORING.md`
+- maintainer release procedure — pre-release validation, namespaced tag publishing, and post-release checks against `workflow/vX.Y.Z` and `template/<id>/vX.Y.Z` — is documented in `docs/RELEASE.md` and referenced from `AGENTS.md`
 
 ### Phase 12. Add maintainer AI safety tooling
 

@@ -85,7 +85,25 @@ jobs:
         run: uv sync --dev
 
       - name: Run integration CLI tests
-        run: uv run pytest tests/test_sdd_cli.py -v
+        run: uv run pytest tests/test_sdd_cli.py -v -m "not release_e2e"
+
+  release-e2e:
+    name: Release E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install maintainer deps
+        run: uv sync --dev
+
+      - name: Run released-artifact end-to-end tests
+        run: uv run pytest tests/test_sdd_cli.py -v -m release_e2e
 
   template-backend-lint:
     name: Template Backend Lint
@@ -216,6 +234,7 @@ jobs:
         workflow-contract,
         template-contract,
         integration-cli,
+        release-e2e,
         template-backend-lint,
         template-backend-tests,
         template-frontend,

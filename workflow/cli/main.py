@@ -198,12 +198,17 @@ def render_project_instruction(template_path: Path, project_display_name: str) -
     return strip_template_header(content).replace("[PROJECT_NAME]", project_display_name)
 
 
-def write_workflow_project_files(destination: Path, project_slug: str) -> list[str]:
+def write_workflow_project_files(
+    destination: Path,
+    project_slug: str,
+    project_files_source: Path | None = None,
+) -> list[str]:
     project_display_name = slug_to_display_name(project_slug)
+    source_root = project_files_source or derived_project_templates_dir()
     generated_paths: list[str] = []
     project_files = {
-        "AGENTS.md": derived_project_templates_dir() / "AGENTS.md.template",
-        "CLAUDE.md": derived_project_templates_dir() / "CLAUDE.md.template",
+        "AGENTS.md": source_root / "AGENTS.md.template",
+        "CLAUDE.md": source_root / "CLAUDE.md.template",
     }
     for filename, template_path in project_files.items():
         rendered = render_project_instruction(template_path, project_display_name)
@@ -1098,7 +1103,11 @@ def build_upgrade_target_snapshot(
             raise typer.BadParameter(f"Template source directory is missing from release tag {target.template_tag}.")
         copy_directory_contents_in_place(extracted_source, snapshot_root)
         shutil.rmtree(template_extract_root)
-    write_workflow_project_files(snapshot_root, project_slug)
+    write_workflow_project_files(
+        snapshot_root,
+        project_slug,
+        project_files_source=snapshot_root / "workflow" / "project-files",
+    )
     return temp_dir, snapshot_root
 
 
@@ -1161,7 +1170,11 @@ def build_installed_baseline_snapshot(
     else:
         copy_directory_contents_in_place(current_manifest.source_dir, snapshot_root)
 
-    write_workflow_project_files(snapshot_root, project_slug)
+    write_workflow_project_files(
+        snapshot_root,
+        project_slug,
+        project_files_source=snapshot_root / "workflow" / "project-files",
+    )
     return temp_dir, snapshot_root
 
 

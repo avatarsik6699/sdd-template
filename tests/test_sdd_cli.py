@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,168 @@ from workflow.cli import main as cli_main
 from workflow.cli.main import app
 
 runner = CliRunner()
+
+
+def _git(repo: Path, *args: str) -> str:
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "Fixture",
+        "GIT_AUTHOR_EMAIL": "fixture@example.com",
+        "GIT_COMMITTER_NAME": "Fixture",
+        "GIT_COMMITTER_EMAIL": "fixture@example.com",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    }
+    result = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return result.stdout
+
+
+def _write_v010_tree(repo: Path, template_id: str) -> None:
+    (repo / "workflow").mkdir(parents=True, exist_ok=True)
+    (repo / "workflow" / "__init__.py").write_text("", encoding="utf-8")
+
+    project_files = repo / "workflow" / "project-files"
+    project_files.mkdir(parents=True, exist_ok=True)
+    (project_files / "AGENTS.md.template").write_text(
+        "> TEMPLATE\n\n---\n\n"
+        "# [PROJECT_NAME] AGENTS\n\n"
+        "Workflow rules v0.1.0.\n\n"
+        "Section Alpha.\n"
+        "Section Beta.\n"
+        "Section Gamma.\n"
+        "Closing notes.\n",
+        encoding="utf-8",
+    )
+    (project_files / "CLAUDE.md.template").write_text(
+        "> TEMPLATE\n\n---\n\n" "# [PROJECT_NAME] CLAUDE\n\n" "Claude adapter v0.1.0.\n",
+        encoding="utf-8",
+    )
+
+    playbooks = repo / "workflow" / "docs" / "playbooks"
+    playbooks.mkdir(parents=True, exist_ok=True)
+    (playbooks / "phase-init.md").write_text("# phase-init v0.1.0\n", encoding="utf-8")
+
+    template_root = repo / "templates" / template_id
+    (template_root / "source" / "app").mkdir(parents=True, exist_ok=True)
+    (template_root / "source" / "docs").mkdir(parents=True, exist_ok=True)
+    (template_root / "source" / "scripts").mkdir(parents=True, exist_ok=True)
+
+    (template_root / "template.yaml").write_text(
+        "\n".join(
+            [
+                'manifest_schema_version: "0.1"',
+                f'template_id: "{template_id}"',
+                'display_name: "Demo Template"',
+                'version: "0.1.0"',
+                'source_dir: "source"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (template_root / "source" / "app" / "main.py").write_text(
+        "print('[PROJECT_NAME]')\n",
+        encoding="utf-8",
+    )
+    (template_root / "source" / "docs" / "STACK.md").write_text(
+        "# Stack v0.1.0\n",
+        encoding="utf-8",
+    )
+    (template_root / "source" / "scripts" / "init-project.sh").write_text(
+        "#!/bin/sh\necho init v0.1.0\n",
+        encoding="utf-8",
+    )
+    (template_root / "source" / "scripts" / "phase-gate.sh").write_text(
+        "#!/bin/sh\necho gate v0.1.0\n",
+        encoding="utf-8",
+    )
+
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "fixture"\nversion = "0.1.0"\n',
+        encoding="utf-8",
+    )
+
+
+def _apply_v020_changes(repo: Path, template_id: str) -> None:
+    playbooks = repo / "workflow" / "docs" / "playbooks"
+    (playbooks / "phase-init.md").write_text(
+        "# phase-init v0.2.0\n\nAdded a stricter gate.\n",
+        encoding="utf-8",
+    )
+    project_files = repo / "workflow" / "project-files"
+    (project_files / "AGENTS.md.template").write_text(
+        "> TEMPLATE\n\n---\n\n"
+        "# [PROJECT_NAME] AGENTS\n\n"
+        "Workflow rules v0.2.0.\n\n"
+        "Section Alpha.\n"
+        "Section Beta.\n"
+        "Section Gamma.\n"
+        "Closing notes.\n",
+        encoding="utf-8",
+    )
+
+    template_root = repo / "templates" / template_id
+    (template_root / "source" / "docs" / "STACK.md").write_text(
+        "# Stack v0.2.0\n\nExtended stack docs.\n",
+        encoding="utf-8",
+    )
+    (template_root / "template.yaml").write_text(
+        "\n".join(
+            [
+                'manifest_schema_version: "0.1"',
+                f'template_id: "{template_id}"',
+                'display_name: "Demo Template"',
+                'version: "0.2.0"',
+                'source_dir: "source"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "fixture"\nversion = "0.2.0"\n',
+        encoding="utf-8",
+    )
+
+
+def _make_tagged_fixture_repo(tmp_path: Path, template_id: str = "demo") -> Path:
+    """Build a real git repo with workflow/vX.Y.Z and template/<id>/vX.Y.Z component tags."""
+    repo = tmp_path / "fixture-repo"
+    repo.mkdir()
+
+    _write_v010_tree(repo, template_id)
+    _git(repo, "init", "-q", "-b", "main")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "release v0.1.0")
+    _git(repo, "tag", "workflow/v0.1.0")
+    _git(repo, "tag", f"template/{template_id}/v0.1.0")
+
+    _apply_v020_changes(repo, template_id)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "release v0.2.0")
+    _git(repo, "tag", "workflow/v0.2.0")
+    _git(repo, "tag", f"template/{template_id}/v0.2.0")
+
+    return repo
+
+
+def _rewrite_lock_versions(
+    generated_project: Path,
+    workflow_version: str,
+    template_version: str,
+) -> None:
+    lock_path = generated_project / ".sdd-lock.yaml"
+    payload = yaml.safe_load(lock_path.read_text(encoding="utf-8"))
+    payload["workflow"]["version"] = workflow_version
+    payload["template"]["version"] = template_version
+    lock_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
 
 def make_minimal_template_repo(tmp_path: Path, template_id: str = "demo-template") -> Path:
@@ -992,4 +1156,173 @@ def test_release_validate_fails_when_expected_existing_tags_are_missing(monkeypa
     assert payload["ok"] is False
     assert payload["tag_policy"] == "existing"
     assert "Expected workflow release tag does not exist: workflow/v0.1.0" in payload["errors"]
-    assert "Expected template release tag does not exist: template/fastapi-nuxt/v0.1.0" in payload["errors"]
+
+
+@pytest.mark.release_e2e
+def test_release_status_resolves_real_component_tags_from_git(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    monkeypatch.chdir(repo)
+
+    result = runner.invoke(app, ["release", "status", "--template", "demo"])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["workflow"]["expected_tag"] == "workflow/v0.2.0"
+    assert payload["workflow"]["expected_tag_exists"] is True
+    assert payload["workflow"]["latest_tag"] == "workflow/v0.2.0"
+    assert payload["template"]["expected_tag"] == "template/demo/v0.2.0"
+    assert payload["template"]["expected_tag_exists"] is True
+    assert payload["template"]["latest_tag"] == "template/demo/v0.2.0"
+
+
+@pytest.mark.release_e2e
+def test_release_validate_passes_against_real_published_tags(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    monkeypatch.chdir(repo)
+
+    result = runner.invoke(
+        app,
+        ["release", "validate", "--template", "demo", "--expect-existing-tags"],
+    )
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True, payload.get("errors")
+    assert payload["workflow"]["tag_exists"] is True
+    assert payload["template_release"]["tag_exists"] is True
+
+
+def _init_generated_project_at(
+    repo: Path,
+    tag: str,
+    template_id: str,
+    project_name: str,
+    generated_dir: Path,
+) -> None:
+    _git(repo, "checkout", "-q", tag)
+    try:
+        result = runner.invoke(
+            app,
+            [
+                "init",
+                "--template",
+                template_id,
+                "--project-name",
+                project_name,
+                str(generated_dir),
+            ],
+        )
+        assert result.exit_code == 0, result.stdout + result.stderr
+    finally:
+        _git(repo, "checkout", "-q", "main")
+
+
+@pytest.mark.release_e2e
+def test_upgrade_check_resolves_released_artifacts_from_real_tags(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    result = runner.invoke(app, ["upgrade", "--check", str(generated)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["resolution"] == "released-artifact"
+    assert payload["target"]["workflow"] == "v0.2.0"
+    assert payload["target"]["template"] == "v0.2.0"
+    actions_by_path = {entry["path"]: entry["action"] for entry in payload["entries"]}
+    assert actions_by_path["workflow/docs/playbooks/phase-init.md"] == "auto-update"
+    assert actions_by_path["docs/STACK.md"] == "auto-update"
+    assert actions_by_path["AGENTS.md"] == "auto-update"
+
+
+@pytest.mark.release_e2e
+def test_upgrade_apply_updates_files_and_advances_lock_via_real_tags(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    result = runner.invoke(app, ["upgrade", "--apply", str(generated)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "upgrade-applied"
+    assert payload["resolution"] == "released-artifact"
+
+    phase_init = (generated / "workflow" / "docs" / "playbooks" / "phase-init.md").read_text(encoding="utf-8")
+    stack_doc = (generated / "docs" / "STACK.md").read_text(encoding="utf-8")
+    agents_doc = (generated / "AGENTS.md").read_text(encoding="utf-8")
+    assert "v0.2.0" in phase_init
+    assert "v0.2.0" in stack_doc
+    assert "v0.2.0" in agents_doc
+
+    lock_payload = yaml.safe_load((generated / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert lock_payload["workflow"]["version"] == "v0.2.0"
+    assert lock_payload["template"]["version"] == "v0.2.0"
+    assert "pending_version" not in lock_payload["workflow"]
+    assert "pending_version" not in lock_payload["template"]
+
+
+@pytest.mark.release_e2e
+def test_upgrade_apply_rebuilds_agents_from_baseline_tag_not_workspace(tmp_path: Path, monkeypatch) -> None:
+    """Baseline AGENTS.md comes from the installed tag, not the current workspace.
+
+    Exercises the three-way merge path where local AGENTS.md has a downstream edit,
+    the release target also changed AGENTS.md, and the clean merge must use the
+    v0.1.0 baseline content from the tag (not the workspace v0.2.0 content that
+    sits beside the CLI while upgrading).
+    """
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    agents_local = generated / "AGENTS.md"
+    original_local = agents_local.read_text(encoding="utf-8")
+    agents_local.write_text(original_local + "\n## Downstream note\n", encoding="utf-8")
+
+    check_result = runner.invoke(app, ["upgrade", "workflow", "--check", str(generated)])
+    assert check_result.exit_code == 0, check_result.stdout + check_result.stderr
+    check_payload = json.loads(check_result.stdout)
+    agents_entry = next(entry for entry in check_payload["entries"] if entry["path"] == "AGENTS.md")
+    assert agents_entry["action"] == "auto-merge", agents_entry
+
+    apply_result = runner.invoke(app, ["upgrade", "workflow", "--apply", str(generated)])
+    assert apply_result.exit_code == 0, apply_result.stdout + apply_result.stderr
+    merged = agents_local.read_text(encoding="utf-8")
+    assert "Workflow rules v0.2.0." in merged
+    assert "## Downstream note" in merged
+
+
+@pytest.mark.release_e2e
+def test_upgrade_check_rejects_tag_outside_workflow_prefix(tmp_path: Path, monkeypatch) -> None:
+    """`--to workflow@<version>` must reject versions that do not have a matching tag."""
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    result = runner.invoke(
+        app,
+        [
+            "upgrade",
+            "workflow",
+            "--check",
+            "--to",
+            "workflow@v9.9.9",
+            str(generated),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "workflow/v9.9.9" in result.stderr

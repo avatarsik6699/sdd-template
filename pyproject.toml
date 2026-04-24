@@ -25,6 +25,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+markers = [
+    "release_e2e: end-to-end CLI tests that exercise real namespaced git tags (workflow/vX.Y.Z, template/<id>/vX.Y.Z) through released-artifact resolution.",
+]
 
 [tool.ruff]
 line-length = 120

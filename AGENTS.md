@@ -67,6 +67,14 @@ Never `sudo`, `chmod -R 777`, delete-and-recreate, or silently loop.
 - No direct push to `main` — open a PR.
 - No `--force`, `reset --hard`, or `--no-verify` without explicit user instruction.
 
+## Releases
+
+Workflow and template components are published as namespaced git tags
+(`workflow/vX.Y.Z`, `template/<template-id>/vX.Y.Z`). The maintainer release
+procedure — pre-release validation, tag publishing, and post-release checks —
+lives in [`docs/RELEASE.md`](docs/RELEASE.md). Do not cut release tags from a
+dirty working tree or without first running `sdd release validate`.
+
 ## What "done" means
 
 - Template files are internally consistent (no broken references, no stale placeholders).
