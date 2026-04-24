@@ -7,6 +7,18 @@ This repository ships two independently versioned components:
 
 Generated projects resolve upgrade targets by checking out these tags and reading the archived content through `git archive`. Tags are the contract — they must exist and must match the versions recorded in the workspace.
 
+## Upgrade compatibility window
+
+`sdd upgrade` defaults to released-artifact resolution. In that mode, the CLI must be able to reconstruct the **installed baseline** for the requested scope from published tags:
+
+- workflow scope requires the installed `workflow/v...` tag
+- template scope requires the installed `template/<template-id>/v...` tag
+- all scope requires both
+
+If one of those installed tags is unavailable, the command fails with an explicit compatibility-window error instead of silently falling back to workspace files.
+
+`--source workspace-current` is an explicit maintainer/debug path. Fallback without installed tags is only allowed when lock coordinates are non-release values (for example local maintainer builds) or when installed release versions match the current checkout versions.
+
 ## Namespaced tag layout
 
 ```text

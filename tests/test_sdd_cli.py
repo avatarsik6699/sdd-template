@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import subprocess
@@ -396,6 +397,57 @@ def test_init_writes_metadata_and_managed_files(tmp_path: Path) -> None:
     assert installed_manifest["source_dir"] == "."
 
 
+def test_init_applies_template_bootstrap_replacements_by_default(tmp_path: Path) -> None:
+    target = tmp_path / "generated-project"
+
+    result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+
+    assert result.exit_code == 0
+    app_main = (target / "app" / "main.py").read_text(encoding="utf-8")
+    assert 'title="Demo Project"' in app_main
+    assert "[PROJECT_NAME]" not in app_main
+
+    pyproject = (target / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'name = "demo-project"' in pyproject
+    env_content = (target / ".env").read_text(encoding="utf-8")
+    assert "DATABASE_URL=postgresql+asyncpg://app_user:" in env_content
+    assert "@db:5432/demo_project" in env_content
+    assert "SECRET_KEY=" in env_content
+
+
+def test_init_applies_domain_replacements_when_domain_is_provided(tmp_path: Path) -> None:
+    target = tmp_path / "generated-project"
+
+    result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-react-router",
+            "--project-name",
+            "demo-project",
+            "--domain",
+            "example.com",
+            str(target),
+        ],
+    )
+
+    assert result.exit_code == 0
+    nginx_conf = (target / "nginx" / "nginx.conf").read_text(encoding="utf-8")
+    assert "[DOMAIN]" not in nginx_conf
+    assert "example.com" in nginx_conf
+
+
 @pytest.mark.parametrize("template_id", ["fastapi-nuxt", "fastapi-react-router"])
 def test_init_composes_multiple_real_templates(tmp_path: Path, template_id: str) -> None:
     target = tmp_path / template_id
@@ -476,6 +528,74 @@ def test_integrate_check_reports_repair_plan_without_writing(tmp_path: Path) -> 
     assert "write .sdd/template-manifest.yaml" in payload["actions"]
     assert not (tmp_path / "AGENTS.md").exists()
     assert not (tmp_path / ".sdd-origin.yaml").exists()
+
+
+def test_integrate_can_apply_template_bootstrap_for_already_integrated_project(tmp_path: Path) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            "--no-apply-template-init",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    app_main = (target / "app" / "main.py").read_text(encoding="utf-8")
+    assert "[PROJECT_NAME]" in app_main
+
+    result = runner.invoke(
+        app,
+        [
+            "integrate",
+            "--apply-template-init",
+            str(target),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "repaired-integration"
+    assert payload["template_init"]["changed_count"] > 0
+    updated_main = (target / "app" / "main.py").read_text(encoding="utf-8")
+    assert "[PROJECT_NAME]" not in updated_main
+    assert 'title="Demo Project"' in updated_main
+
+
+def test_integrate_repairs_partial_metadata_for_workflow_composed_project(tmp_path: Path) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    (target / ".sdd-lock.yaml").unlink()
+
+    result = runner.invoke(app, ["integrate", str(target)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "repaired-integration"
+    assert payload["message"].startswith("Incomplete .sdd metadata was repaired and normalized.")
+    assert (target / ".sdd-origin.yaml").exists()
+    assert (target / ".sdd-lock.yaml").exists()
+    assert (target / ".sdd" / "ownership.yaml").exists()
+    assert (target / ".sdd" / "template-manifest.yaml").exists()
 
 
 def test_upgrade_check_reports_review_plan_for_initialized_project(tmp_path: Path) -> None:
@@ -767,6 +887,114 @@ def test_upgrade_workflow_apply_reports_partial_when_merge_required(tmp_path: Pa
     assert "# Local override" in updated_agents
     assert "# Upstream override" not in updated_agents
 
+    lock_payload = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert lock_payload["workflow"]["pending_version"] == payload["target"]["workflow"]
+    assert lock_payload["workflow"]["pending_paths"] == ["AGENTS.md"]
+
+
+def test_upgrade_workflow_apply_partial_with_safe_updates_tracks_pending_version(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    lock_before = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    installed_workflow_version = lock_before["workflow"]["version"]
+
+    agents_path = target / "AGENTS.md"
+    local_lines = agents_path.read_text(encoding="utf-8").splitlines()
+    local_lines[0] = "# Local override"
+    agents_path.write_text("\n".join(local_lines) + "\n", encoding="utf-8")
+
+    original = cli_main.build_upgrade_target_snapshot
+
+    def patched_target_snapshot(target_spec, project_slug):
+        temp_dir, snapshot = original(target_spec, project_slug)
+        upstream_agents = snapshot / "AGENTS.md"
+        upstream_lines = upstream_agents.read_text(encoding="utf-8").splitlines()
+        upstream_lines[0] = "# Upstream override"
+        upstream_agents.write_text("\n".join(upstream_lines) + "\n", encoding="utf-8")
+
+        claude_path = snapshot / "CLAUDE.md"
+        claude_path.write_text(
+            claude_path.read_text(encoding="utf-8") + "\nUpstream workflow note.\n",
+            encoding="utf-8",
+        )
+        return temp_dir, snapshot
+
+    monkeypatch.setattr(cli_main, "build_upgrade_target_snapshot", patched_target_snapshot)
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--source", "workspace-current", "--apply", str(target)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "upgrade-partial"
+    assert "AGENTS.md" in payload["blocked"]
+    assert "CLAUDE.md" in payload["applied"]["paths"]
+
+    lock_after = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert lock_after["workflow"]["version"] == installed_workflow_version
+    assert lock_after["workflow"]["pending_version"] == payload["target"]["workflow"]
+    assert lock_after["workflow"]["pending_paths"] == ["AGENTS.md"]
+    updated_claude = (target / "CLAUDE.md").read_text(encoding="utf-8")
+    expected_hash = hashlib.sha256(updated_claude.encode("utf-8")).hexdigest()
+    assert lock_after["workflow"]["baseline_hashes"]["CLAUDE.md"] == expected_hash
+
+
+def test_upgrade_workflow_apply_auto_delete_removes_lock_hash(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    deleted_path = "workflow/docs/playbooks/phase-init.md"
+    lock_before = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert deleted_path in lock_before["workflow"]["baseline_hashes"]
+    assert (target / deleted_path).exists()
+
+    original = cli_main.build_upgrade_target_snapshot
+
+    def patched_target_snapshot(target_spec, project_slug):
+        temp_dir, snapshot = original(target_spec, project_slug)
+        upstream_target = snapshot / deleted_path
+        if upstream_target.exists():
+            upstream_target.unlink()
+        return temp_dir, snapshot
+
+    monkeypatch.setattr(cli_main, "build_upgrade_target_snapshot", patched_target_snapshot)
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--source", "workspace-current", "--apply", str(target)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    deleted_entry = next(entry for entry in payload["entries"] if entry["path"] == deleted_path)
+    assert deleted_entry["action"] == "auto-delete"
+    assert deleted_path in payload["applied"]["paths"]
+    assert not (target / deleted_path).exists()
+
+    lock_after = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert deleted_path not in lock_after["workflow"]["baseline_hashes"]
+
 
 def test_upgrade_workflow_check_reports_auto_merge_for_clean_text_merge(tmp_path: Path, monkeypatch) -> None:
     target = tmp_path / "generated-project"
@@ -871,11 +1099,16 @@ def test_upgrade_check_defaults_to_released_artifact_resolution(tmp_path: Path, 
         ],
     )
     assert init_result.exit_code == 0
+    _rewrite_lock_versions(target, workflow_version="v0.1.0", template_version="v0.1.0")
 
     monkeypatch.setattr(
         cli_main,
         "release_tags_for_prefix",
-        lambda prefix: (["workflow/v0.2.0"] if prefix == "workflow/" else ["template/fastapi-nuxt/v0.2.0"]),
+        lambda prefix: (
+            ["workflow/v0.1.0", "workflow/v0.2.0"]
+            if prefix == "workflow/"
+            else ["template/fastapi-nuxt/v0.1.0", "template/fastapi-nuxt/v0.2.0"]
+        ),
     )
 
     def fake_release_manifest(template_id: str, template_tag: str):
@@ -925,11 +1158,16 @@ def test_upgrade_apply_uses_released_artifact_source(tmp_path: Path, monkeypatch
         ],
     )
     assert init_result.exit_code == 0
+    _rewrite_lock_versions(target, workflow_version="v0.1.0", template_version="v0.1.0")
 
     monkeypatch.setattr(
         cli_main,
         "release_tags_for_prefix",
-        lambda prefix: (["workflow/v0.2.0"] if prefix == "workflow/" else ["template/fastapi-nuxt/v0.2.0"]),
+        lambda prefix: (
+            ["workflow/v0.1.0", "workflow/v0.2.0"]
+            if prefix == "workflow/"
+            else ["template/fastapi-nuxt/v0.1.0", "template/fastapi-nuxt/v0.2.0"]
+        ),
     )
 
     def fake_release_manifest(template_id: str, template_tag: str):
@@ -951,11 +1189,12 @@ def test_upgrade_apply_uses_released_artifact_source(tmp_path: Path, monkeypatch
             target_root = destination / "templates" / "fastapi-nuxt" / "source"
             target_root.parent.mkdir(parents=True, exist_ok=True)
             cli_main.shutil.copytree(source, target_root)
-            agents_path = target_root / "scripts" / "init-project.sh"
-            agents_path.write_text(
-                agents_path.read_text(encoding="utf-8") + "\n# released artifact change\n",
-                encoding="utf-8",
-            )
+            if tag.endswith("/v0.2.0"):
+                agents_path = target_root / "scripts" / "init-project.sh"
+                agents_path.write_text(
+                    agents_path.read_text(encoding="utf-8") + "\n# released artifact change\n",
+                    encoding="utf-8",
+                )
             return
         raise AssertionError(f"Unexpected repo path: {repo_path}")
 
@@ -998,6 +1237,61 @@ def test_upgrade_check_fails_without_release_artifacts(tmp_path: Path) -> None:
     assert "No released artifacts found" in result.stderr
 
 
+def test_upgrade_check_fails_when_installed_baseline_tags_are_unavailable(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+    _rewrite_lock_versions(target, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    monkeypatch.setattr(
+        cli_main,
+        "release_tags_for_prefix",
+        lambda prefix: (["workflow/v0.2.0"] if prefix == "workflow/" else ["template/fastapi-nuxt/v0.2.0"]),
+    )
+
+    def fake_release_manifest(template_id: str, template_tag: str):
+        manifest = cli_main.load_template_manifest(template_id)
+        manifest.version = template_tag.removeprefix(f"template/{template_id}/")
+        return manifest
+
+    monkeypatch.setattr(cli_main, "load_release_template_manifest", fake_release_manifest)
+
+    def fake_extract(tag: str, repo_path: str, destination: Path) -> None:
+        if repo_path == "workflow":
+            source = cli_main.repo_root() / "workflow"
+            target_root = destination / "workflow"
+            target_root.parent.mkdir(parents=True, exist_ok=True)
+            cli_main.shutil.copytree(source, target_root)
+            return
+        if repo_path == "templates/fastapi-nuxt/source":
+            source = cli_main.repo_root() / "templates" / "fastapi-nuxt" / "source"
+            target_root = destination / "templates" / "fastapi-nuxt" / "source"
+            target_root.parent.mkdir(parents=True, exist_ok=True)
+            cli_main.shutil.copytree(source, target_root)
+            return
+        raise AssertionError(f"Unexpected repo path: {repo_path}")
+
+    monkeypatch.setattr(cli_main, "extract_git_tree", fake_extract)
+
+    result = runner.invoke(app, ["upgrade", "--check", str(target)])
+
+    assert result.exit_code != 0
+    assert "outside the supported compatibility window" in result.stderr
+    assert "workflow/v0.1.0" in result.stderr
+    assert "template/fastapi-nuxt/v0.1.0" in result.stderr
+
+
 def test_upgrade_workspace_current_rejects_explicit_release_targets(tmp_path: Path) -> None:
     target = tmp_path / "generated-project"
 
@@ -1029,6 +1323,192 @@ def test_upgrade_workspace_current_rejects_explicit_release_targets(tmp_path: Pa
 
     assert result.exit_code != 0
     assert "`--to` targets require `--source released-artifact`" in result.stderr
+
+
+def test_upgrade_check_reports_all_incompatible_project_metadata_versions(tmp_path: Path) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    origin_payload = yaml.safe_load((target / ".sdd-origin.yaml").read_text(encoding="utf-8"))
+    lock_payload = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    origin_payload["project_metadata_version"] = "0.0"
+    lock_payload["project_metadata_version"] = "0.2"
+    (target / ".sdd-origin.yaml").write_text(yaml.safe_dump(origin_payload, sort_keys=False), encoding="utf-8")
+    (target / ".sdd-lock.yaml").write_text(yaml.safe_dump(lock_payload, sort_keys=False), encoding="utf-8")
+
+    result = runner.invoke(app, ["upgrade", "--source", "workspace-current", "--check", str(target)])
+
+    assert result.exit_code != 0
+    assert ".sdd-origin.yaml='0.0'" in result.stderr
+    assert ".sdd-lock.yaml='0.2'" in result.stderr
+
+
+def test_upgrade_check_fails_when_recorded_baseline_hash_disagrees_with_reconstructed_baseline(tmp_path: Path) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    lock_payload = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    lock_payload["workflow"]["baseline_hashes"]["AGENTS.md"] = "0" * 64
+    (target / ".sdd-lock.yaml").write_text(yaml.safe_dump(lock_payload, sort_keys=False), encoding="utf-8")
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--source", "workspace-current", "--check", str(target)])
+
+    assert result.exit_code != 0
+    assert "Installed baseline integrity check failed" in result.stderr
+    assert "hash mismatches:" in result.stderr
+
+
+def test_upgrade_check_fails_when_reconstructed_baseline_path_is_missing(tmp_path: Path, monkeypatch) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    original = cli_main.build_installed_baseline_snapshot
+
+    def patched_baseline_snapshot(current_manifest, lock_payload, project_slug, scope, source_mode):
+        temp_dir, snapshot = original(current_manifest, lock_payload, project_slug, scope, source_mode)
+        agents_path = snapshot / "AGENTS.md"
+        if agents_path.exists():
+            agents_path.unlink()
+        return temp_dir, snapshot
+
+    monkeypatch.setattr(cli_main, "build_installed_baseline_snapshot", patched_baseline_snapshot)
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--source", "workspace-current", "--check", str(target)])
+
+    assert result.exit_code != 0
+    assert "Installed baseline integrity check failed" in result.stderr
+    assert "missing paths: AGENTS.md" in result.stderr
+
+
+def test_upgrade_workspace_current_fails_when_missing_installed_tag_is_outside_compatibility_window(
+    tmp_path: Path, monkeypatch
+) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    _rewrite_lock_versions(target, workflow_version="v9.9.9", template_version="v0.1.0")
+    monkeypatch.setattr(cli_main, "release_tags_for_prefix", lambda prefix: [])
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--source", "workspace-current", "--check", str(target)])
+
+    assert result.exit_code != 0
+    assert "outside the supported compatibility window" in result.stderr
+    assert "workflow/v9.9.9" in result.stderr
+
+
+def test_upgrade_workspace_current_allows_missing_installed_tag_inside_compatibility_window(
+    tmp_path: Path, monkeypatch
+) -> None:
+    target = tmp_path / "generated-project"
+
+    init_result = runner.invoke(
+        app,
+        [
+            "init",
+            "--template",
+            "fastapi-nuxt",
+            "--project-name",
+            "demo-project",
+            str(target),
+        ],
+    )
+    assert init_result.exit_code == 0
+
+    lock_payload = yaml.safe_load((target / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    installed_workflow_version = lock_payload["workflow"]["version"]
+    _rewrite_lock_versions(target, workflow_version=installed_workflow_version, template_version="v0.1.0")
+    monkeypatch.setattr(cli_main, "release_tags_for_prefix", lambda prefix: [])
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--source", "workspace-current", "--check", str(target)])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "upgrade-plan"
+    assert payload["resolution"] == "workspace-current"
+
+
+def test_extract_git_tree_uses_data_filter(tmp_path: Path, monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeArchive:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def extractall(self, destination: Path, *, filter: str | None = None) -> None:
+            captured["destination"] = destination
+            captured["filter"] = filter
+
+    def fake_run(args, cwd, capture_output, check):
+        del cwd, capture_output, check
+        assert args == ["git", "archive", "--format=tar", "workflow/v0.2.0", "workflow"]
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=b"archive-bytes")
+
+    def fake_tar_open(*, fileobj):
+        captured["fileobj"] = fileobj
+        return _FakeArchive()
+
+    monkeypatch.setattr(cli_main.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli_main.tarfile, "open", fake_tar_open)
+
+    destination = tmp_path / "extract-destination"
+    cli_main.extract_git_tree("workflow/v0.2.0", "workflow", destination)
+
+    assert destination.exists()
+    assert captured["destination"] == destination
+    assert captured["filter"] == "data"
+    assert isinstance(captured["fileobj"], io.BytesIO)
+    assert captured["fileobj"].getvalue() == b"archive-bytes"
 
 
 def test_release_status_reports_expected_and_latest_component_tags(monkeypatch) -> None:
@@ -1096,6 +1576,65 @@ def test_release_validate_passes_for_react_router_template_with_tag_checks_skipp
     assert payload["template_release"]["tag"] == "template/fastapi-react-router/v0.1.0"
 
 
+def test_release_validate_template_scope_does_not_require_legacy_init_script(monkeypatch, tmp_path: Path) -> None:
+    repo = make_minimal_template_repo(tmp_path)
+    source_dir = repo / "templates" / "demo-template" / "source"
+    (source_dir / "scripts").mkdir()
+    (source_dir / "scripts" / "phase-gate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(cli_main, "release_tags_for_prefix", lambda prefix: [])
+
+    result = runner.invoke(
+        app,
+        [
+            "release",
+            "validate",
+            "--scope",
+            "template",
+            "--template",
+            "demo-template",
+            "--skip-tag-checks",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert not any("init-project.sh" in item for item in payload["errors"])
+    assert payload["workflow"]["version"] is None
+    assert payload["workflow"]["tag"] is None
+    assert payload["workflow"]["tag_exists"] is None
+    assert any(
+        "Workflow package version could not be resolved; template-scope validation continued." in warning
+        for warning in payload["warnings"]
+    )
+
+
+def test_release_validate_scope_all_requires_resolvable_workflow_version(monkeypatch, tmp_path: Path) -> None:
+    repo = make_minimal_template_repo(tmp_path)
+    source_dir = repo / "templates" / "demo-template" / "source"
+    (source_dir / "scripts").mkdir()
+    (source_dir / "scripts" / "phase-gate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(cli_main, "release_tags_for_prefix", lambda prefix: [])
+
+    result = runner.invoke(
+        app,
+        [
+            "release",
+            "validate",
+            "--scope",
+            "all",
+            "--template",
+            "demo-template",
+            "--skip-tag-checks",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Could not read repository package version from" in result.stderr
+
+
 def test_release_validate_can_ignore_tag_state_for_structural_checks(monkeypatch) -> None:
     monkeypatch.setattr(
         cli_main,
@@ -1113,7 +1652,7 @@ def test_release_validate_can_ignore_tag_state_for_structural_checks(monkeypatch
     assert payload["ok"] is True
     assert payload["scope"] == "all"
     assert payload["tag_policy"] == "ignore"
-    assert "Release tag existence checks were skipped" in payload["warnings"][0]
+    assert any("Release tag existence checks were skipped" in warning for warning in payload["warnings"])
 
 
 def test_release_validate_scope_template_skips_workflow_tag_requirement(monkeypatch) -> None:
@@ -1240,6 +1779,26 @@ def test_upgrade_check_resolves_released_artifacts_from_real_tags(tmp_path: Path
 
 
 @pytest.mark.release_e2e
+def test_upgrade_check_fails_when_installed_baseline_tags_missing_in_released_mode(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    _git(repo, "tag", "-d", "workflow/v0.1.0")
+    _git(repo, "tag", "-d", "template/demo/v0.1.0")
+
+    result = runner.invoke(app, ["upgrade", "--check", str(generated)])
+
+    assert result.exit_code != 0
+    assert "workflow/v0.1.0" in result.stderr
+    assert "template/demo/v0.1.0" in result.stderr
+    assert "compatibility window" in result.stderr.lower()
+
+
+@pytest.mark.release_e2e
 def test_upgrade_apply_updates_files_and_advances_lock_via_real_tags(tmp_path: Path, monkeypatch) -> None:
     repo = _make_tagged_fixture_repo(tmp_path)
     generated = tmp_path / "generated-proj"
@@ -1264,6 +1823,64 @@ def test_upgrade_apply_updates_files_and_advances_lock_via_real_tags(tmp_path: P
 
     lock_payload = yaml.safe_load((generated / ".sdd-lock.yaml").read_text(encoding="utf-8"))
     assert lock_payload["workflow"]["version"] == "v0.2.0"
+    assert lock_payload["template"]["version"] == "v0.2.0"
+    assert "pending_version" not in lock_payload["workflow"]
+    assert "pending_version" not in lock_payload["template"]
+
+
+@pytest.mark.release_e2e
+def test_upgrade_workflow_apply_advances_workflow_lock_only_via_real_tags(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    result = runner.invoke(app, ["upgrade", "workflow", "--apply", str(generated)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "upgrade-applied"
+    assert payload["resolution"] == "released-artifact"
+    assert payload["scope"] == "workflow"
+
+    phase_init = (generated / "workflow" / "docs" / "playbooks" / "phase-init.md").read_text(encoding="utf-8")
+    stack_doc = (generated / "docs" / "STACK.md").read_text(encoding="utf-8")
+    assert "v0.2.0" in phase_init
+    assert "v0.1.0" in stack_doc
+
+    lock_payload = yaml.safe_load((generated / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert lock_payload["workflow"]["version"] == "v0.2.0"
+    assert lock_payload["template"]["version"] == "v0.1.0"
+    assert "pending_version" not in lock_payload["workflow"]
+    assert "pending_version" not in lock_payload["template"]
+
+
+@pytest.mark.release_e2e
+def test_upgrade_template_apply_advances_template_lock_only_via_real_tags(tmp_path: Path, monkeypatch) -> None:
+    repo = _make_tagged_fixture_repo(tmp_path)
+    generated = tmp_path / "generated-proj"
+
+    monkeypatch.chdir(repo)
+    _init_generated_project_at(repo, "workflow/v0.1.0", "demo", "demo-proj", generated)
+    _rewrite_lock_versions(generated, workflow_version="v0.1.0", template_version="v0.1.0")
+
+    result = runner.invoke(app, ["upgrade", "template", "--apply", str(generated)])
+
+    assert result.exit_code == 0, result.stdout + result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "upgrade-applied"
+    assert payload["resolution"] == "released-artifact"
+    assert payload["scope"] == "template"
+
+    phase_init = (generated / "workflow" / "docs" / "playbooks" / "phase-init.md").read_text(encoding="utf-8")
+    stack_doc = (generated / "docs" / "STACK.md").read_text(encoding="utf-8")
+    assert "v0.1.0" in phase_init
+    assert "v0.2.0" in stack_doc
+
+    lock_payload = yaml.safe_load((generated / ".sdd-lock.yaml").read_text(encoding="utf-8"))
+    assert lock_payload["workflow"]["version"] == "v0.1.0"
     assert lock_payload["template"]["version"] == "v0.2.0"
     assert "pending_version" not in lock_payload["workflow"]
     assert "pending_version" not in lock_payload["template"]

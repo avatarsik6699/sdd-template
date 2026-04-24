@@ -56,6 +56,9 @@ E2E remains local-only by default.
    and apply the safe subset with `uv run sdd upgrade --apply`. By default, upgrades resolve
    against released workflow/template artifacts. Maintainers can still inspect the current
    checkout explicitly with `uv run sdd upgrade --source workspace-current --check`.
+   In released-artifact mode, the installed baseline must be reconstructible from the installed
+   component tags (`workflow/v...`, `template/<id>/v...`); otherwise `sdd upgrade` fails with an
+   explicit compatibility-window diagnostic instead of silently falling back.
    Generated projects can inspect their active gate helper/docs contract with
    `uv run sdd gate resolve`.
    The safe apply path now includes clean three-way text merges for managed files when the

@@ -2,7 +2,7 @@
 
 > Working plan for separating the reusable SDD workflow from concrete technology stacks inside the `sdd-template` repository.
 >
-> Status: implementation in progress
+> Status: implementation complete
 > Last updated: 2026-04-24
 
 ---
@@ -963,7 +963,7 @@ Exit criteria:
 
 ### Phase 4. Introduce generated template metadata
 
-Status: started
+Status: completed for the current manifest schema and registration flow
 
 Objective:
 replace hidden assumptions with inspectable metadata without requiring large manual authoring effort.
@@ -999,7 +999,7 @@ Exit criteria:
 
 ### Phase 6. Rebuild initialization around `sdd init` + `sdd integrate`
 
-Status: in progress
+Status: completed
 
 Objective:
 replace monolithic hardcoded bootstrap logic with workflow-driven integration.
@@ -1016,9 +1016,16 @@ Exit criteria:
 
 - initialization no longer hardcodes one repo layout as architectural truth
 
+Current state:
+
+- `sdd init` now applies template bootstrap replacements directly (project naming placeholders, db-name placeholders, optional domain placeholders, `.env` generation) without requiring `scripts/init-project.sh`
+- `sdd integrate --apply-template-init` can apply the same template bootstrap replacements to already integrated projects
+- `--run-compat-init` remains available as a fallback legacy compatibility path, but is no longer the primary recommended flow
+- template release-path validation no longer treats `scripts/init-project.sh` as a required canonical path; its presence is now compatibility-only
+
 ### Phase 7. Introduce downstream provenance and upgrade metadata
 
-Status: in progress
+Status: completed
 
 Objective:
 make generated projects upgradeable without relying on blind regeneration or manual reverse-engineering.
@@ -1039,9 +1046,16 @@ Exit criteria:
 - every generated project has explicit provenance and ownership data
 - downstream upgrades have enough metadata to build a reviewable plan
 
+Current state:
+
+- `sdd init` writes `.sdd-origin.yaml`, `.sdd-lock.yaml`, `.sdd/ownership.yaml`, and `.sdd/template-manifest.yaml` for every generated project
+- metadata schema version checks are enforced during upgrade metadata loading for compatibility safety
+- ownership defaults and baseline hash capture are generated centrally in CLI logic
+- `sdd integrate` now repairs partially present `.sdd-*` metadata for workflow-composed projects by re-writing canonical metadata files
+
 ### Phase 8. Implement `sdd upgrade --check` and scoped upgrade flows
 
-Status: in progress
+Status: completed
 
 Objective:
 give generated projects a transparent, explicit path for receiving upstream updates.
@@ -1073,8 +1087,18 @@ Current state:
 - maintainer-facing `sdd release status` and `sdd release validate` commands now make workflow/template release coordinates and tag expectations explicit before publishing component tags
 - end-to-end CLI tests now exercise real `workflow/vX.Y.Z` and `template/<id>/vX.Y.Z` git tags through `git archive`-backed resolution, covering `sdd release status`, `sdd release validate --expect-existing-tags`, `sdd upgrade --check`, and `sdd upgrade --apply` against published artifacts
 - `write_workflow_project_files` now accepts an explicit source directory so upgrade target and baseline snapshots render `AGENTS.md` / `CLAUDE.md` from the tagged `workflow/project-files/`, rather than accidentally falling back to the workspace copy when the workspace has drifted ahead of the installed or target release
+- released-artifact E2E tests now verify scoped default-mode upgrades (`sdd upgrade workflow --apply` and `sdd upgrade template --apply`) advance only their respective lock component versions while leaving the non-target component pinned
+- upgrade apply coverage now includes managed-file deletion handling that removes deleted workflow-managed paths from `.sdd-lock.yaml` baseline hashes
+- upgrade metadata loading now reports all incompatible `.sdd-*` metadata schema versions together (instead of failing one file at a time), improving mixed-scope compatibility diagnostics
+- workflow-scope partial apply outcomes now persist `.sdd-lock.yaml` pending markers even when no safe file operations were applied, and tests cover both zero-safe and mixed safe+blocked partial outcomes
+- upgrade analysis now fails loudly when reconstructed installed baselines disagree with recorded `.sdd-lock.yaml` baseline hashes (hash mismatch or missing baseline path), and tests cover both integrity-failure cases
+- compatibility-window policy is now enforced before baseline reconstruction: required components must resolve to installed release tags, except explicit `workspace-current` fallback when lock versions match the current checkout (or are non-release maintainer coordinates), and CLI tests now cover both allowed and blocked tag-unavailable cases with explicit diagnostics
+- maintainer-facing upgrade/release docs now document the compatibility-window behavior explicitly, and release-E2E coverage now includes the released-artifact failure path when installed baseline tags are missing
+- targeted phase-8 validation is green (`35` focused upgrade/release tests via `tests/test_sdd_cli.py -k "upgrade or release_status or release_validate"`)
 
 ### Phase 9. Rebuild gate dispatch around workflow-owned orchestration
+
+Status: completed
 
 Objective:
 keep gate procedure reusable while allowing stack-specific execution.
@@ -1097,6 +1121,8 @@ Current state:
 - the `phase-gate` playbook and shipped runtime wrappers now treat template metadata as the gate-dispatch source, while `docs/STACK.md` remains the human-readable command reference
 
 ### Phase 10. Rework docs and CI around the new architecture
+
+Status: completed
 
 Objective:
 make the repository understandable and test the architecture we actually want.
@@ -1130,6 +1156,8 @@ Current state:
 
 ### Phase 11. Add template-authoring automation and guidance
 
+Status: completed
+
 Objective:
 make adding templates realistic for maintainers.
 
@@ -1152,6 +1180,8 @@ Current state:
 - maintainer release procedure — pre-release validation, namespaced tag publishing, and post-release checks against `workflow/vX.Y.Z` and `template/<id>/vX.Y.Z` — is documented in `docs/RELEASE.md` and referenced from `AGENTS.md`
 
 ### Phase 12. Add maintainer AI safety tooling
+
+Status: completed
 
 Objective:
 make the correct maintainer flow easy even when development happens through an AI agent.
@@ -1177,6 +1207,8 @@ Current state:
 
 ### Phase 13. Second-template proving step
 
+Status: completed
+
 Objective:
 prove the architecture is not accidentally shaped around FastAPI/Nuxt.
 
@@ -1198,6 +1230,21 @@ Current status:
 - CLI tests now exercise init/gate/upgrade/registration flows against both `fastapi-nuxt` and `fastapi-react-router`
 - CI template-contract validation now runs for both templates
 - repo CI now validates backend lint/tests, frontend checks, and image builds for both templates, while keeping Playwright E2E local-only by default
+
+---
+
+## 14.1 Active execution queue (as of 2026-04-24)
+
+No unresolved implementation phases remain.
+
+Immediate next step:
+
+- keep this refactor plan closed and track any future upgrade hardening as new scoped backlog items (instead of reopening phase execution here)
+
+Post-plan hardening log:
+
+- 2026-04-24: completed first scoped follow-up by hardening release-archive extraction in `extract_git_tree` (`tarfile.extractall(..., filter="data")`) and adding regression coverage in `tests/test_sdd_cli.py`
+- 2026-04-24: hardened `sdd release validate` scope behavior with regression tests proving template-scope validation can continue without a resolvable workflow package version (warning path), while `all`/`workflow` scopes still fail fast when workflow version resolution is required
 
 ---
 

@@ -7,6 +7,7 @@ import io
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import tarfile
@@ -548,12 +549,15 @@ def load_project_ownership_rules(project_root: Path) -> OwnershipRules:
     )
 
 
-def validate_project_metadata_version(payload: dict[str, Any], path: Path) -> None:
-    version = payload.get("project_metadata_version")
-    if version != METADATA_SCHEMA_VERSION:
-        raise typer.BadParameter(
-            f"Unsupported project metadata version in {path}: {version!r}. Expected {METADATA_SCHEMA_VERSION!r}."
-        )
+def incompatible_project_metadata_versions(
+    payloads: list[tuple[Path, dict[str, Any]]],
+) -> list[tuple[Path, Any]]:
+    incompatible: list[tuple[Path, Any]] = []
+    for path, payload in payloads:
+        version = payload.get("project_metadata_version")
+        if version != METADATA_SCHEMA_VERSION:
+            incompatible.append((path, version))
+    return incompatible
 
 
 def write_project_metadata(
@@ -593,10 +597,20 @@ def load_upgrade_metadata(
 
     origin_payload = load_yaml(origin_path)
     lock_payload = load_yaml(lock_path)
-    validate_project_metadata_version(origin_payload, origin_path)
-    validate_project_metadata_version(lock_payload, lock_path)
     ownership_payload = load_yaml(ownership_path)
-    validate_project_metadata_version(ownership_payload, ownership_path)
+    incompatible_metadata = incompatible_project_metadata_versions(
+        [
+            (origin_path, origin_payload),
+            (lock_path, lock_payload),
+            (ownership_path, ownership_payload),
+        ]
+    )
+    if incompatible_metadata:
+        details = "; ".join(f"{path.relative_to(project_root)}={version!r}" for path, version in incompatible_metadata)
+        raise typer.BadParameter(
+            "Unsupported project metadata version in upgrade metadata files. "
+            f"Expected {METADATA_SCHEMA_VERSION!r}. Found: {details}."
+        )
     rules = load_project_ownership_rules(project_root)
     return origin_payload, lock_payload, rules
 
@@ -716,7 +730,7 @@ def extract_git_tree(tag: str, repo_path: str, destination: Path) -> None:
         raise typer.BadParameter(f"Could not extract {repo_path} from {tag}.")
     destination.mkdir(parents=True, exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(result.stdout)) as archive:
-        archive.extractall(destination)
+        archive.extractall(destination, filter="data")
 
 
 def latest_release_version(prefix: str) -> str | None:
@@ -793,7 +807,6 @@ def validate_template_manifest_paths(manifest: TemplateManifest) -> tuple[list[s
     manifest_payload = load_yaml(manifest.manifest_path)
     for required_path in [
         source_root / "docs" / "STACK.md",
-        source_root / "scripts" / "init-project.sh",
         source_root / "scripts" / "phase-gate.sh",
     ]:
         if not required_path.exists():
@@ -839,6 +852,12 @@ def validate_template_manifest_paths(manifest: TemplateManifest) -> tuple[list[s
         hook_path = source_root / hook_path_value
         if not hook_path.exists():
             errors.append(f"Init hook `{hook_id}` points to a missing path: {hook_path}")
+
+    if (source_root / "scripts" / "init-project.sh").exists():
+        warnings.append(
+            "Legacy compatibility script `scripts/init-project.sh` is present. "
+            "Prefer CLI-native bootstrap via `sdd init` / `sdd integrate --apply-template-init`."
+        )
 
     return errors, warnings
 
@@ -900,9 +919,21 @@ def validate_release_payload(
     check_tags: bool,
 ) -> dict[str, Any]:
     manifest = load_template_manifest(template)
-    effective_workflow_version = normalize_release_version(workflow_version or load_repo_package_version())
+    workspace_workflow_version: str | None = None
+    workflow_version_error: str | None = None
+    try:
+        workspace_workflow_version = normalize_release_version(load_repo_package_version())
+    except typer.BadParameter as exc:
+        workflow_version_error = str(exc)
+
+    if scope in {"all", "workflow"} and workflow_version_error is not None:
+        raise typer.BadParameter(workflow_version_error)
+
+    effective_workflow_version = (
+        normalize_release_version(workflow_version) if workflow_version else workspace_workflow_version
+    )
     effective_template_version = normalize_release_version(template_version or manifest.version)
-    workflow_tag = f"workflow/{effective_workflow_version}"
+    workflow_tag = f"workflow/{effective_workflow_version}" if effective_workflow_version else None
     template_tag = f"template/{manifest.template_id}/{effective_template_version}"
     workflow_tags = release_tags_for_prefix("workflow/")
     template_tags = release_tags_for_prefix(f"template/{manifest.template_id}/")
@@ -910,8 +941,14 @@ def validate_release_payload(
     errors: list[str] = []
     warnings: list[str] = []
 
-    if normalize_release_version(load_repo_package_version()) != effective_workflow_version:
+    if (
+        workspace_workflow_version is not None
+        and effective_workflow_version is not None
+        and workspace_workflow_version != effective_workflow_version
+    ):
         warnings.append("Requested workflow release version does not match `pyproject.toml` `project.version`.")
+    if workspace_workflow_version is None and scope == "template":
+        warnings.append("Workflow package version could not be resolved; template-scope validation continued.")
     if normalize_release_version(manifest.version) != effective_template_version:
         warnings.append("Requested template release version does not match `template.yaml` `version`.")
 
@@ -928,7 +965,7 @@ def validate_release_payload(
         errors.extend(template_errors)
         warnings.extend(template_warnings)
 
-    workflow_tag_exists = workflow_tag in workflow_tags
+    workflow_tag_exists = workflow_tag in workflow_tags if workflow_tag else None
     template_tag_exists = template_tag in template_tags
     if check_tags:
         if allow_existing_tags:
@@ -1116,18 +1153,120 @@ def maybe_normalize_installed_release(version: str) -> str | None:
         return None
     try:
         normalized = normalize_release_version(version)
+        parse_release_semver(normalized)
     except typer.BadParameter:
         return None
     return normalized
+
+
+def required_components_for_scope(scope: str) -> set[str]:
+    if scope == "workflow":
+        return {"workflow"}
+    if scope == "template":
+        return {"template"}
+    return {"workflow", "template"}
+
+
+def compatibility_window_fallback_allowed(
+    *,
+    component: str,
+    source_mode: str,
+    installed_version: str | None,
+    current_manifest: TemplateManifest,
+) -> bool:
+    if source_mode != "workspace-current":
+        return False
+    if installed_version is None:
+        # Workspace-current mode is an explicit maintainer/debug path and may carry
+        # non-release lock coordinates (for example git describe strings).
+        return True
+    if component == "workflow":
+        return installed_version == normalize_release_version(load_repo_package_version())
+    return installed_version == normalize_release_version(current_manifest.version)
+
+
+def validate_installed_baseline_reconstruction_policy(
+    *,
+    scope: str,
+    source_mode: str,
+    current_manifest: TemplateManifest,
+    lock_payload: dict[str, Any],
+) -> None:
+    required_components = required_components_for_scope(scope)
+    issues: list[str] = []
+    workflow_tags = set(release_tags_for_prefix("workflow/"))
+    template_prefix = f"template/{current_manifest.template_id}/"
+    template_tags = set(release_tags_for_prefix(template_prefix))
+    for component in sorted(required_components):
+        if component == "workflow":
+            prefix = "workflow/"
+            available_tags = workflow_tags
+        else:
+            prefix = template_prefix
+            available_tags = template_tags
+        installed_raw = str(lock_payload.get(component, {}).get("version", ""))
+        installed_version = maybe_normalize_installed_release(installed_raw)
+        expected_tag = f"{prefix}{installed_version}" if installed_version is not None else None
+        tag_available = expected_tag is not None and expected_tag in available_tags
+        if tag_available:
+            continue
+        fallback_allowed = compatibility_window_fallback_allowed(
+            component=component,
+            source_mode=source_mode,
+            installed_version=installed_version,
+            current_manifest=current_manifest,
+        )
+        if fallback_allowed:
+            continue
+        if installed_version is None:
+            issues.append(
+                f"{component}: installed version {installed_raw!r} is not a valid release version "
+                "(expected semantic style like v1.2.3)."
+            )
+            continue
+        if expected_tag is None:
+            issues.append(
+                f"{component}: could not compute expected release tag from installed version {installed_version!r}."
+            )
+            continue
+        if not available_tags:
+            issues.append(
+                f"{component}: expected installed release tag {expected_tag} is unavailable because no tags exist "
+                f"under {prefix}."
+            )
+            continue
+        issues.append(f"{component}: expected installed release tag {expected_tag} is unavailable in this checkout.")
+    if not issues:
+        return
+    remediation = (
+        "Restore access to the missing installed component release tags, or run "
+        "`sdd upgrade --source workspace-current ...` from a checkout whose workflow/template versions match "
+        "the installed project lock versions."
+    )
+    raise typer.BadParameter(
+        "Installed baseline cannot be reconstructed from released artifacts for the required upgrade scope. "
+        + " ".join(issues)
+        + " This project is outside the supported compatibility window. "
+        + remediation
+    )
 
 
 def build_installed_baseline_snapshot(
     current_manifest: TemplateManifest,
     lock_payload: dict[str, Any],
     project_slug: str,
+    scope: str,
+    source_mode: str,
 ) -> tuple[tempfile.TemporaryDirectory[str], Path]:
     temp_dir = tempfile.TemporaryDirectory(prefix="sdd-upgrade-baseline-")
     snapshot_root = Path(temp_dir.name)
+
+    validate_installed_baseline_reconstruction_policy(
+        scope=scope,
+        source_mode=source_mode,
+        current_manifest=current_manifest,
+        lock_payload=lock_payload,
+    )
 
     installed_workflow_version = maybe_normalize_installed_release(
         str(lock_payload.get("workflow", {}).get("version", ""))
@@ -1268,6 +1407,48 @@ def baseline_hashes_for_scope(lock_payload: dict[str, Any], scope: str) -> dict[
     if scope == "all":
         return {**workflow_hashes, **template_hashes}
     raise typer.BadParameter(f"Unsupported upgrade scope: {scope}")
+
+
+def validate_reconstructed_baseline_integrity(
+    baseline_hashes: dict[str, str],
+    baseline_files: dict[str, Path],
+    rules: OwnershipRules,
+    scope: str,
+) -> None:
+    missing_paths: list[str] = []
+    mismatched_hashes: list[tuple[str, str, str]] = []
+
+    for path, recorded_hash in sorted(baseline_hashes.items()):
+        ownership = classify_path(path, rules)
+        if not scope_includes_category(scope, ownership):
+            continue
+        baseline_file = baseline_files.get(path)
+        if baseline_file is None:
+            missing_paths.append(path)
+            continue
+        reconstructed_hash = sha256_file(baseline_file)
+        if reconstructed_hash != recorded_hash:
+            mismatched_hashes.append((path, recorded_hash, reconstructed_hash))
+
+    if not missing_paths and not mismatched_hashes:
+        return
+
+    details: list[str] = []
+    if missing_paths:
+        details.append(f"missing paths: {', '.join(missing_paths)}")
+    if mismatched_hashes:
+        details.append(
+            "hash mismatches: "
+            + ", ".join(
+                f"{path} (recorded={recorded}, reconstructed={reconstructed})"
+                for path, recorded, reconstructed in mismatched_hashes
+            )
+        )
+    raise typer.BadParameter(
+        "Installed baseline integrity check failed for `.sdd-lock.yaml` baseline metadata. "
+        + "; ".join(details)
+        + " This usually indicates metadata corruption or a compatibility-window mismatch."
+    )
 
 
 def build_upgrade_candidate_paths(
@@ -1450,6 +1631,8 @@ def analyze_upgrade(
         current_manifest=current_manifest,
         lock_payload=lock_payload,
         project_slug=project_slug,
+        scope=scope,
+        source_mode=target.resolution,
     )
     try:
         local_files = collect_files(project_root)
@@ -1457,6 +1640,12 @@ def analyze_upgrade(
         baseline_files = collect_files(baseline_root)
         target_hashes = {path: sha256_file(abs_path) for path, abs_path in target_files.items()}
         baseline_hashes = baseline_hashes_for_scope(lock_payload, scope)
+        validate_reconstructed_baseline_integrity(
+            baseline_hashes=baseline_hashes,
+            baseline_files=baseline_files,
+            rules=rules,
+            scope=scope,
+        )
         candidate_paths = build_upgrade_candidate_paths(project_root, target_root, rules, scope, baseline_hashes)
         entries: list[UpgradeEntry] = []
         merged_contents: dict[str, str] = {}
@@ -1675,6 +1864,15 @@ def apply_upgrade(
 
     if not safe_entries:
         status = "upgrade-partial" if merge_entries else "upgrade-noop"
+        if merge_entries:
+            updated_lock = update_lock_payload_for_apply(
+                lock_payload=lock_payload,
+                entries=entries,
+                target_hashes=analysis.target_hashes,
+                target_versions=analysis.target_versions,
+                scope=scope,
+            )
+            write_yaml(project_root / ".sdd-lock.yaml", updated_lock)
         return {
             "status": status,
             "mode": "apply",
@@ -1797,9 +1995,11 @@ def apply_upgrade(
 def run_compat_init_script(
     destination: Path,
     project_name: str,
-    domain: str,
+    domain: str | None,
     admin_email: str,
 ) -> None:
+    if not domain:
+        raise typer.BadParameter("--domain is required with --run-compat-init.")
     script = destination / "scripts" / "init-project.sh"
     if not script.exists():
         typer.echo(
@@ -1822,6 +2022,133 @@ def run_compat_init_script(
         raise typer.Exit(result.returncode)
     if result.stdout:
         typer.echo(result.stdout.rstrip())
+
+
+def sanitize_domain(value: str) -> str:
+    domain = value.strip()
+    domain = domain.removeprefix("http://").removeprefix("https://").rstrip("/")
+    if not domain:
+        raise typer.BadParameter("Domain cannot be empty.")
+    if not re.fullmatch(r"[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?", domain):
+        raise typer.BadParameter(f"Domain must be a hostname without protocol (for example `example.com`): {value!r}")
+    return domain
+
+
+def looks_like_text_file(path: Path) -> bool:
+    if path.name.startswith(".env"):
+        return True
+    text_suffixes = {
+        ".css",
+        ".conf",
+        ".ini",
+        ".js",
+        ".json",
+        ".md",
+        ".py",
+        ".sh",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".txt",
+        ".vue",
+        ".yaml",
+        ".yml",
+    }
+    return path.suffix.lower() in text_suffixes
+
+
+def replace_env_line(content: str, key: str, value: str) -> str:
+    pattern = re.compile(rf"(?m)^{re.escape(key)}=.*$")
+    replacement = f"{key}={value}"
+    if pattern.search(content):
+        return pattern.sub(replacement, content)
+    suffix = "" if content.endswith("\n") or not content else "\n"
+    return f"{content}{suffix}{replacement}\n"
+
+
+def apply_template_bootstrap(
+    destination: Path,
+    project_slug: str,
+    domain: str | None,
+    admin_email: str,
+) -> dict[str, Any]:
+    project_display_name = slug_to_display_name(project_slug)
+    db_name = project_slug.replace("-", "_")
+    resolved_domain = sanitize_domain(domain) if domain else None
+
+    replacements = {
+        "[PROJECT_NAME]": project_display_name,
+        "[PROJECT_DESCRIPTION]": f"{project_display_name} backend",
+        "my-project": project_slug,
+        "myapp": db_name,
+    }
+    if resolved_domain:
+        replacements["[DOMAIN]"] = resolved_domain
+
+    changed_paths: list[str] = []
+    for rel_path, abs_path in collect_files(destination).items():
+        if rel_path.startswith(("workflow/", ".sdd/")):
+            continue
+        if rel_path in {".sdd-origin.yaml", ".sdd-lock.yaml"}:
+            continue
+        if rel_path == "scripts/init-project.sh":
+            continue
+        if not looks_like_text_file(abs_path):
+            continue
+        try:
+            original = abs_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        updated = original
+        for source, target in replacements.items():
+            updated = updated.replace(source, target)
+        if updated != original:
+            abs_path.write_text(updated, encoding="utf-8")
+            changed_paths.append(rel_path)
+
+    env_created = False
+    env_path = destination / ".env"
+    env_example_path = destination / ".env.example"
+    if env_example_path.exists():
+        env_content = env_example_path.read_text(encoding="utf-8")
+        for source, target in replacements.items():
+            env_content = env_content.replace(source, target)
+        secret_key = secrets.token_hex(32)
+        db_password = secrets.token_urlsafe(24)
+        env_content = replace_env_line(env_content, "POSTGRES_PASSWORD", db_password)
+        env_content = replace_env_line(
+            env_content,
+            "DATABASE_URL",
+            f"postgresql+asyncpg://app_user:{db_password}@db:5432/{db_name}",
+        )
+        env_content = replace_env_line(env_content, "SECRET_KEY", secret_key)
+        if resolved_domain:
+            env_content = env_content.replace("[DOMAIN]", resolved_domain)
+        env_path.write_text(env_content, encoding="utf-8")
+        env_created = True
+        if ".env" not in changed_paths:
+            changed_paths.append(".env")
+
+    migration_path = destination / "alembic" / "versions" / "0001_users_table.py"
+    if admin_email != "admin@example.com" and migration_path.exists():
+        migration_text = migration_path.read_text(encoding="utf-8")
+        migration_updated = migration_text.replace("admin@example.com", admin_email)
+        if migration_updated != migration_text:
+            migration_path.write_text(migration_updated, encoding="utf-8")
+            rel_migration_path = str(migration_path.relative_to(destination))
+            if rel_migration_path not in changed_paths:
+                changed_paths.append(rel_migration_path)
+
+    return {
+        "project_name": project_slug,
+        "project_display_name": project_display_name,
+        "database_name": db_name,
+        "domain": resolved_domain,
+        "admin_email": admin_email,
+        "env_created": env_created,
+        "changed_paths": sorted(changed_paths),
+        "changed_count": len(changed_paths),
+    }
 
 
 def detect_repo_shape(target_dir: Path) -> dict[str, Any]:
@@ -2249,7 +2576,7 @@ def init_command(
         str | None,
         typer.Option(
             "--domain",
-            help="Domain for the legacy compatibility init step. Required only with --run-compat-init.",
+            help="Optional project domain used for template bootstrap replacements (for example in nginx config).",
         ),
     ] = None,
     admin_email: Annotated[
@@ -2260,9 +2587,16 @@ def init_command(
         bool,
         typer.Option(
             "--run-compat-init",
-            help="Run scripts/init-project.sh after composing the project from workflow + template.",
+            help="Run legacy scripts/init-project.sh after CLI bootstrap (fallback compatibility path).",
         ),
     ] = False,
+    apply_template_init: Annotated[
+        bool,
+        typer.Option(
+            "--apply-template-init/--no-apply-template-init",
+            help="Apply template placeholder/bootstrap replacements after composing workflow + template.",
+        ),
+    ] = True,
 ) -> None:
     project_slug = slugify_project_name(project_name)
     manifest = load_template_manifest(template)
@@ -2278,17 +2612,21 @@ def init_command(
     typer.echo(f"Generated managed project files: {', '.join(generated_files)}")
     typer.echo(f"Wrote project metadata: {', '.join(metadata_files)}")
 
+    if apply_template_init:
+        bootstrap_payload = apply_template_bootstrap(destination, project_slug, domain, admin_email)
+        typer.echo(
+            "Applied template bootstrap replacements: "
+            f"{bootstrap_payload['changed_count']} files"
+            + (" and generated .env" if bootstrap_payload["env_created"] else "")
+            + "."
+        )
+    else:
+        typer.echo("Template bootstrap replacements were skipped (--no-apply-template-init).")
+
     if run_compat_init:
-        if not domain:
-            raise typer.BadParameter("--domain is required with --run-compat-init.")
         run_compat_init_script(destination, project_slug, domain, admin_email)
     else:
-        typer.echo("Compatibility init step not run.")
-        typer.echo(
-            f"Next step for template {manifest.template_id}:\n"
-            f"  cd {destination}\n"
-            f"  ./scripts/init-project.sh {project_slug} <domain> [admin-email]"
-        )
+        typer.echo("Legacy compatibility init script not run.")
 
 
 @app.command("register-template")
@@ -2349,6 +2687,24 @@ def integrate_command(
             help="Report what would be repaired without writing files.",
         ),
     ] = False,
+    domain: Annotated[
+        str | None,
+        typer.Option(
+            "--domain",
+            help="Optional project domain used for template bootstrap replacements.",
+        ),
+    ] = None,
+    admin_email: Annotated[
+        str,
+        typer.Option("--admin-email", help="Admin email used by template bootstrap replacements."),
+    ] = "admin@example.com",
+    apply_template_init: Annotated[
+        bool,
+        typer.Option(
+            "--apply-template-init",
+            help="Apply template placeholder/bootstrap replacements after repair.",
+        ),
+    ] = False,
     target_dir: Annotated[
         Path,
         typer.Argument(
@@ -2389,20 +2745,7 @@ def integrate_command(
         )
         raise typer.Exit(code=1)
 
-    if has_any_metadata and not has_all_metadata:
-        print_json(
-            {
-                "status": "partial-metadata-detected",
-                "project": state,
-                "message": (
-                    "Project metadata is incomplete. Restore or remove the partial `.sdd-*` files "
-                    "before attempting integration repair."
-                ),
-            }
-        )
-        raise typer.Exit(code=1)
-
-    if has_agents and has_claude and has_workflow_dir and has_all_metadata:
+    if has_agents and has_claude and has_workflow_dir and has_all_metadata and not apply_template_init:
         print_json(
             {
                 "status": "already-integrated",
@@ -2429,14 +2772,19 @@ def integrate_command(
         if not has_claude:
             planned_actions.append("write CLAUDE.md")
         if not has_all_metadata:
-            planned_actions.extend(
-                [
-                    "write .sdd-origin.yaml",
-                    "write .sdd-lock.yaml",
-                    "write .sdd/ownership.yaml",
-                    "write .sdd/template-manifest.yaml",
-                ]
-            )
+            if has_any_metadata:
+                planned_actions.append("repair incomplete .sdd metadata")
+            else:
+                planned_actions.extend(
+                    [
+                        "write .sdd-origin.yaml",
+                        "write .sdd-lock.yaml",
+                        "write .sdd/ownership.yaml",
+                        "write .sdd/template-manifest.yaml",
+                    ]
+                )
+        if apply_template_init:
+            planned_actions.append("apply template bootstrap replacements")
 
         if not planned_actions:
             print_json(
@@ -2463,10 +2811,23 @@ def integrate_command(
 
         generated_files: list[str] = []
         metadata_files: list[str] = []
+        bootstrap_summary: dict[str, Any] | None = None
         if not (has_agents and has_claude):
             generated_files = write_workflow_project_files(target, resolved_project_slug)
         if not has_all_metadata:
             metadata_files = write_project_metadata(target, manifest, resolved_project_slug)
+        if apply_template_init:
+            bootstrap_summary = apply_template_bootstrap(target, resolved_project_slug, domain, admin_email)
+        if generated_files or metadata_files:
+            message = "Missing managed workflow files and metadata were recreated."
+            if has_any_metadata and not has_all_metadata:
+                message = "Incomplete .sdd metadata was repaired and normalized."
+        else:
+            message = "Project was already integrated."
+        if bootstrap_summary is not None:
+            message += " Template bootstrap replacements were applied."
+        else:
+            message += " Template bootstrap replacements were not requested."
 
         print_json(
             {
@@ -2476,10 +2837,8 @@ def integrate_command(
                 "project_name": resolved_project_slug,
                 "generated_files": generated_files,
                 "metadata_files": metadata_files,
-                "message": (
-                    "Missing managed workflow files and metadata were recreated. "
-                    "Template-specific placeholder replacement still belongs to the compatibility init step."
-                ),
+                "template_init": bootstrap_summary,
+                "message": message,
             }
         )
         return
@@ -2491,8 +2850,8 @@ def integrate_command(
                 "project": state,
                 "message": (
                     "Workflow files and stack files are present, but derived-project instruction "
-                    "files have not been generated yet. Run "
-                    "`./scripts/init-project.sh <project-slug> <domain> [admin-email]` inside the project."
+                    "files have not been generated yet. Run `sdd integrate --apply-template-init` "
+                    "to recreate managed files and apply template bootstrap replacements."
                 ),
             }
         )
