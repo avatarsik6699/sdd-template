@@ -1,6 +1,6 @@
 ---
 name: spec-init
-description: Initialize or refresh SPEC.md from a high-level product brief. Use when the architect wants the AI to draft a complete, validated spec and iteratively close gaps with clarification questions.
+description: Initialize, reset, or continue SPEC.md from a high-level product brief (`--new` / `--continue`). Use when the architect wants the AI to draft a complete, validated spec and iteratively close gaps with clarification questions.
 metadata:
   priority: 6
   pathPatterns:

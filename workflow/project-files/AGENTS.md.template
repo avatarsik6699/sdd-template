@@ -134,7 +134,7 @@ The runtime wrappers are thin stubs — all workflow logic lives in `workflow/do
 
 ```
 1.  Architect provides project brief
-2.  spec-init         → drafts and validates docs/SPEC.md
+2.  spec-init         → drafts/resets/continues docs/SPEC.md (`--new` or `--continue`)
 3.  phase-init N      → creates docs/PHASE_N.md scaffold
 4.  Architect fills Contracts + Files sections
 5.  AI implements scope on feat/phase-N branch

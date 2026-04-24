@@ -14,7 +14,7 @@ This file only adds Claude-specific items.
 
 | Command | When to use | Wraps workflow |
 |---------|-------------|----------------|
-| `/spec-init [project brief]` | Draft or refresh `docs/SPEC.md` from high-level requirements | [workflow/docs/playbooks/spec-init.md](workflow/docs/playbooks/spec-init.md) |
+| `/spec-init [--new\|--continue] [project brief]` | Draft, reset, or continue `docs/SPEC.md` from high-level requirements | [workflow/docs/playbooks/spec-init.md](workflow/docs/playbooks/spec-init.md) |
 | `/phase-init [N]` | Scaffold the next `docs/PHASE_XX.md` from SPEC | [workflow/docs/playbooks/phase-init.md](workflow/docs/playbooks/phase-init.md) |
 | `/phase-gate [N]` | Validate a phase before committing | [workflow/docs/playbooks/phase-gate.md](workflow/docs/playbooks/phase-gate.md) |
 | `/spec-sync [description]` | Immediately after editing `docs/SPEC.md` | [workflow/docs/playbooks/spec-sync.md](workflow/docs/playbooks/spec-sync.md) |

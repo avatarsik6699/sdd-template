@@ -7,6 +7,9 @@ This document is the single source of truth for the `spec-init` workflow. Runtim
 ## Input
 
 - Optional free-form product brief (one paragraph to several pages).
+- Optional mode flag in command arguments:
+  - `--new`: start a new spec cycle and rewrite `docs/SPEC.md` end-to-end from the new brief.
+  - `--continue`: extend/refine the existing spec as a continuation.
 
 ## Required reads
 
@@ -17,15 +20,34 @@ This document is the single source of truth for the `spec-init` workflow. Runtim
 
 ## Procedure
 
-### 1. Capture or confirm the source brief
+### 1. Determine mode (`--new` vs `--continue`)
+
+- Parse command arguments for `--new` / `--continue`.
+- If both flags are present, stop and ask for exactly one mode.
+- If no mode flag is provided:
+  - If `docs/SPEC.md` is still mostly template placeholders, default to `new`.
+  - Otherwise default to `continue` (safer non-destructive behavior).
+- Record the chosen mode in the final report.
+
+Mode intent:
+
+- **new**: treat as a fresh planning cycle (major reset/re-baseline). Rewrite all sections to match the new brief.
+- **continue**: preserve validated existing sections and update only impacted scope/contracts/phases from the new delta brief.
+
+### 2. Capture or confirm the source brief
 
 - If command arguments include a brief, use it as the initial source.
 - If no brief is provided, ask the architect for a concise product brief before editing `docs/SPEC.md`.
 - Preserve explicit user wording for domain constraints and business rules. Do not silently reinterpret strict requirements.
 
-### 2. Build the first complete SPEC draft
+### 3. Build the first complete SPEC draft
 
-Update `docs/SPEC.md` so each section is concretely filled from the brief:
+Update `docs/SPEC.md` so each section is concretely filled from the brief.
+
+- In `new` mode: rewrite the full document end-to-end.
+- In `continue` mode: keep unaffected sections stable; modify only sections touched by the new brief.
+
+Target coverage:
 
 - Product context, goals, and non-goals
 - User roles/personas and core journeys
@@ -42,7 +64,7 @@ Rules:
 - Keep uncertain items explicit with `[NEEDS_CLARIFICATION: ...]` markers.
 - Do not invent external constraints (compliance, SLOs, integrations) unless stated or inferred with high confidence from the brief.
 
-### 3. Run critical validation checks
+### 4. Run critical validation checks
 
 Validate the draft against this checklist:
 
@@ -55,7 +77,7 @@ Validate the draft against this checklist:
 
 For each failed check, add a concrete issue to a temporary gap list.
 
-### 4. Ask focused clarification questions
+### 5. Ask focused clarification questions
 
 If the gap list is non-empty:
 
@@ -71,19 +93,21 @@ After receiving answers:
 
 If the architect cannot answer now, keep explicit `[NEEDS_CLARIFICATION: ...]` markers and flag the related phases as blocked in the report.
 
-### 5. Finalize and normalize the document
+### 6. Finalize and normalize the document
 
 - Remove stale placeholders and contradictory statements.
 - Keep wording concise and implementation-ready.
 - Ensure phase numbering/order is coherent (`PHASE_01`, `PHASE_02`, ...).
-- If phase files already exist and the new SPEC changes scope, remind architect to run `spec-sync` immediately after `spec-init`.
+- If phase files already exist and the updated SPEC changes scope/contracts, remind architect to run `spec-sync` immediately after `spec-init`.
+- If all previously planned phases were already completed and mode is `continue`, ensure the phase plan clearly indicates newly added follow-up phases (for example new `PHASE_0X` entries).
 
-### 6. Report
+### 7. Report
 
 ```
 ## spec-init complete
 
 SPEC.md: updated
+Mode: [new | continue | auto->new | auto->continue]
 Source brief: [provided in arguments / provided via follow-up questions]
 Validation: PASS / PASS with deferred clarifications
 Clarification rounds: [count]

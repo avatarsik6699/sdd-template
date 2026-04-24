@@ -32,7 +32,7 @@ Nuxt `prepare` pre-step required before frontend type/tests — lives in
    `sdd init` is the canonical entrypoint for creating a working copy of the template. The compatibility script still replaces placeholders, generates `.env`, creates random secrets, and copies both `AGENTS.md` and `CLAUDE.md` into place for the current reference stack.
    Prerequisites and post-init steps → **[docs/STACK.md](docs/STACK.md#prerequisites)**.
 
-2. **Initialize [docs/SPEC.md](docs/SPEC.md)**: `/spec-init "project brief"` — drafts and validates the specification.
+2. **Initialize [docs/SPEC.md](docs/SPEC.md)**: `/spec-init [--new|--continue] "project brief"` — drafts, resets, or continues the specification.
 
 3. **Scaffold phase 1**: `/phase-init 01` — generates `docs/PHASE_01.md` from SPEC.
 
@@ -80,7 +80,7 @@ Affected phases are marked `⚠️ NEEDS_REVIEW` in `docs/STATE.md` until resolv
 
 | Command | When to use |
 |---------|-------------|
-| `/spec-init [project brief]` | At project start (or major reset) to draft and critically validate [docs/SPEC.md](docs/SPEC.md) |
+| `/spec-init [--new\|--continue] [project brief]` | At project start, major reset, or continuation after completed phases to draft/update [docs/SPEC.md](docs/SPEC.md) |
 | `/spec-sync [description]` | Immediately after editing [docs/SPEC.md](docs/SPEC.md) |
 | `/phase-init [N]` | To scaffold the next [docs/PHASE_XX.md](docs/PHASE_TEMPLATE.md) from SPEC |
 | `/phase-gate [N]` | Before committing — runs automated checks (including deterministic Playwright Chromium E2E) and also fails if `Architect Review Notes` still contain unchecked items |
