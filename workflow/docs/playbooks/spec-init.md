@@ -40,7 +40,24 @@ Mode intent:
 - If no brief is provided, ask the architect for a concise product brief before editing `docs/SPEC.md`.
 - Preserve explicit user wording for domain constraints and business rules. Do not silently reinterpret strict requirements.
 
-### 3. Build the first complete SPEC draft
+### 3. Request design assets (new mode, UI in scope)
+
+Skip this step when mode is `continue` unless the brief explicitly introduces new screens.
+
+Ask:
+
+> "Do you have Figma screenshots for key screens (login, dashboard, main flows)? Attach them now and I'll use them to fill §5. If not, type 'skip'."
+
+If screenshots are provided:
+
+- For each screenshot, identify: the screen name, page route, key visible components, layout structure, and any notable interactions.
+- Use this information to populate §5.1 (Pages) and §5.2 (Components) with concrete names and structure rather than generic placeholders.
+- Add a `### 5.3 Design References` subsection listing each screen with a one-line note on what it depicts. Do not transcribe the screenshot in prose — capture only what is structurally useful for implementation.
+- Do not invent screens not shown in the screenshots.
+
+If skipped: fill §5 from the brief alone and leave `### 5.3 Design References` with a `<!-- none provided -->` comment.
+
+### 4. Build the first complete SPEC draft
 
 Update `docs/SPEC.md` so each section is concretely filled from the brief.
 
@@ -64,7 +81,7 @@ Rules:
 - Keep uncertain items explicit with `[NEEDS_CLARIFICATION: ...]` markers.
 - Do not invent external constraints (compliance, SLOs, integrations) unless stated or inferred with high confidence from the brief.
 
-### 4. Run critical validation checks
+### 5. Run critical validation checks
 
 Validate the draft against this checklist:
 
@@ -77,7 +94,7 @@ Validate the draft against this checklist:
 
 For each failed check, add a concrete issue to a temporary gap list.
 
-### 5. Ask focused clarification questions
+### 6. Ask focused clarification questions
 
 If the gap list is non-empty:
 
@@ -88,12 +105,12 @@ If the gap list is non-empty:
 After receiving answers:
 
 - Update `docs/SPEC.md`.
-- Re-run validation (step 3).
+- Re-run validation (step 5).
 - Repeat until all critical gaps are resolved.
 
 If the architect cannot answer now, keep explicit `[NEEDS_CLARIFICATION: ...]` markers and flag the related phases as blocked in the report.
 
-### 6. Finalize and normalize the document
+### 7. Finalize and normalize the document
 
 - Remove stale placeholders and contradictory statements.
 - Keep wording concise and implementation-ready.
@@ -101,7 +118,7 @@ If the architect cannot answer now, keep explicit `[NEEDS_CLARIFICATION: ...]` m
 - If phase files already exist and the updated SPEC changes scope/contracts, remind architect to run `spec-sync` immediately after `spec-init`.
 - If all previously planned phases were already completed and mode is `continue`, ensure the phase plan clearly indicates newly added follow-up phases (for example new `PHASE_0X` entries).
 
-### 7. Report
+### 8. Report
 
 ```
 ## spec-init complete

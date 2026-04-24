@@ -22,6 +22,16 @@
 
 ---
 
+## Design References
+
+<!-- Optional. Populated by /phase-init when Figma screenshots are provided.
+     Remove this section entirely if no design assets exist for this phase.
+     Format: `Screen name — brief description (key components, interactions)` -->
+
+<!-- none provided -->
+
+---
+
 ## Scope
 
 ### Backend

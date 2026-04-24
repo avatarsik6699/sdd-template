@@ -36,7 +36,21 @@ Look up `PHASE_[XX-1]` in `docs/STATE.md`:
 - Anything else → warn: "PHASE_[XX-1] is not marked done (status: [status]). Starting the next phase before completing the previous one may cause context drift. Proceed anyway?" Wait for confirmation.
 - Creating `PHASE_01` (no predecessor) → skip this check.
 
-### 3. Extract scope and contracts from `docs/SPEC.md`
+### 3. Request phase design assets (optional)
+
+If the phase scope includes any frontend UI work, ask:
+
+> "Are there Figma screenshots for any screens in Phase [XX]? Attach them now, or type 'skip'."
+
+If screenshots are provided:
+
+- For each screenshot, note the screen name and what it depicts (layout, key components, interactions).
+- Add a `## Design References` section to the phase doc (placed after `## Phase Goal`, before `## Scope`) listing each screen with a one-line description.
+- Use the screenshots to make the `### Frontend` scope checkboxes more concrete (specific component names, layout decisions visible in the design).
+
+If skipped: omit the `## Design References` section from the phase doc entirely.
+
+### 4. Extract scope and contracts from `docs/SPEC.md`
 
 **Scope** (from §8): phase title and all scope items.
 
@@ -52,7 +66,7 @@ Look up `PHASE_[XX-1]` in `docs/STATE.md`:
 
 If a section yields nothing for this phase, write `None` — never leave a subsection blank or as a generic TODO.
 
-### 4. Create `docs/PHASE_XX.md`
+### 5. Create `docs/PHASE_XX.md`
 
 Copy `docs/PHASE_TEMPLATE.md` and substitute placeholders:
 
@@ -70,7 +84,7 @@ Copy `docs/PHASE_TEMPLATE.md` and substitute placeholders:
 
 Use `[TODO: verify]` only for details genuinely absent from SPEC.md (e.g. a smoke-test response body example). Do not invent data.
 
-### 5. Append the phase row to `docs/STATE.md`
+### 6. Append the phase row to `docs/STATE.md`
 
 Add to the Phase Status table:
 
@@ -78,7 +92,7 @@ Add to the Phase Status table:
 | PHASE_[XX] | ⏳ pending | v0.[XX].0 | ⬜ | - | [Phase Title] |
 ```
 
-### 6. Report
+### 7. Report
 
 ```
 ## phase-init complete

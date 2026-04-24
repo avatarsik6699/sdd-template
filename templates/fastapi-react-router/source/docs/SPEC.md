@@ -106,6 +106,14 @@ stores/        (Pinia: auth, ui, ...)
 composables/   (useApi, ...)
 ```
 
+### 5.3 Design References
+
+<!-- Screenshots attached during /spec-init. One entry per key screen.
+     Format: `Screen name — brief description (route, key components, notable interactions)`
+     Leave the comment below if no design assets were provided. -->
+
+<!-- none provided -->
+
 ---
 
 ## 6. Infrastructure and CI/CD
