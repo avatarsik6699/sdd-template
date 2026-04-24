@@ -57,7 +57,7 @@ flowchart TD
     F --> G{Automated checks pass and Architect Review Notes resolved?}
     G -- No --> H[Fix code/tests/docs and update review notes]
     H --> F
-    G -- Yes --> I[git commit feat(phase-N): ...]
+    G -- Yes --> I["git commit feat(phase-N): ..."]
     I --> J[/context-update N/]
     J --> K[Open PR feat/phase-N -> develop and merge]
     K --> L{SPEC changed mid-phase?}
