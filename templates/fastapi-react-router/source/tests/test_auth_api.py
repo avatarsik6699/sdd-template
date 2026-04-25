@@ -6,8 +6,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import create_access_token, hash_password
-from app.db.models.user import User, UserRole
+from app.modules.auth import create_access_token, hash_password
+from app.modules.users import User, UserRole
 
 
 @pytest.fixture()

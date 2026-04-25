@@ -9,7 +9,16 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "types": ["node", "vitest/globals"]
+    "types": ["node", "vite/client", "vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["app/*"],
+      "@shared/*": ["app/shared/*"],
+      "@entities/*": ["app/entities/*"],
+      "@features/*": ["app/features/*"],
+      "@widgets/*": ["app/widgets/*"],
+      "@pages/*": ["app/pages/*"]
+    }
   },
   "include": [
     "app",

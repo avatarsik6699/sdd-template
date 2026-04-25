@@ -4,8 +4,10 @@ from logging.config import fileConfig
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
-# Import all models so Alembic can detect them
-import app.db.models  # noqa: F401
+# Import all models so Alembic can detect them.
+# Each domain module owns its own ORM models — re-exported via the package's
+# __init__.py — so importing the package is enough to register them on Base.metadata.
+import app.modules.users  # noqa: F401
 from alembic import context
 from app.db.base import Base
 

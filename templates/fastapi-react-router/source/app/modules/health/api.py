@@ -8,6 +8,6 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health(db: AsyncSession = Depends(get_db)) -> dict:
+async def health(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     await db.execute(text("SELECT 1"))
     return {"status": "ok", "db": "connected"}

@@ -1,0 +1,4 @@
+"""User-domain constants."""
+
+MAX_EMAIL_LENGTH = 255
+MAX_HASHED_PASSWORD_LENGTH = 255

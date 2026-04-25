@@ -19,6 +19,7 @@ node_modules/
 frontend/.nuxt/
 frontend/.output/
 frontend/dist/
+frontend/build/
 
 # OS
 .DS_Store
